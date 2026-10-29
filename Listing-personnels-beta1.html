@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi Utilisateurs M365</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; background:#f0f2f5; color:#1a1a2e; }
+  .container { max-width:1300px; margin:0 auto; padding:20px; }
+  header { background:linear-gradient(135deg,#0078d4,#005a9e); color:#fff; padding:20px 30px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+  header h1 { font-size:1.4rem; font-weight:600; }
+  .toolbar { display:flex; gap:10px; flex-wrap:wrap; }
+  .btn { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:.85rem; font-weight:500; transition:all .2s; }
+  .btn-primary { background:#fff; color:#0078d4; }
+  .btn-primary:hover { background:#e8f0fe; }
+  .btn-success { background:#107c10; color:#fff; }
+  .btn-success:hover { background:#0e6b0e; }
+  .btn-danger { background:#d13438; color:#fff; }
+  .btn-danger:hover { background:#b52e31; }
+  .btn-edit { background:#ff8c00; color:#fff; }
+  .btn-edit:hover { background:#e67e00; }
+  .btn-edit.active { background:#107c10; }
+  .btn-sm { padding:5px 10px; font-size:.78rem; }
+  .btn-add { background:#00b294; color:#fff; }
+  .btn-add:hover { background:#00997d; }
+  .btn-profile { background:#7b2ff7; color:#fff; }
+  .btn-profile:hover { background:#6a28d4; }
+  .search-box { padding:8px 14px; border:1px solid #ccc; border-radius:6px; font-size:.85rem; width:260px; }
+  .stats { display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap; }
+  .stat-card { background:#fff; border-radius:8px; padding:12px 20px; box-shadow:0 1px 3px rgba(0,0,0,.08); flex:1; min-width:140px; }
+  .stat-card .num { font-size:1.6rem; font-weight:700; color:#0078d4; }
+  .stat-card .label { font-size:.75rem; color:#666; text-transform:uppercase; }
+  table { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  thead { background:#0078d4; color:#fff; }
+  th { padding:12px 14px; text-align:left; font-size:.78rem; text-transform:uppercase; letter-spacing:.5px; white-space:nowrap; }
+  th.sortable { cursor:pointer; user-select:none; }
+  th.sortable:hover { background:#006cbe; }
+  .arrow { opacity:.85; font-size:.7rem; margin-left:3px; }
+  td { padding:11px 14px; border-bottom:1px solid #eee; font-size:.85rem; }
+  tbody tr:hover { background:#f5f9ff; cursor:pointer; }
+  .editable { border-bottom:1px dashed #999; cursor:text; min-width:40px; display:inline-block; }
+  .editable:focus { outline:2px solid #0078d4; background:#e8f0fe; border-radius:2px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:.72rem; font-weight:500; }
+  .badge-active { background:#d4edda; color:#155724; }
+  .badge-inactive { background:#f8d7da; color:#721c24; }
+  .badge-user { background:#e8f0fe; color:#0078d4; }
+  .badge-group { background:#fff3e0; color:#e65100; }
+  .badge-sec { background:#e3f2fd; color:#0d47a1; }
+  .badge-list { background:#f3e5f5; color:#7b1fa2; }
+  .badge-profile { background:#ede7f6; color:#4a148c; }
+  .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:1000; justify-content:center; align-items:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:#fff; border-radius:12px; width:95%; max-width:700px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  .modal-header { background:linear-gradient(135deg,#0078d4,#005a9e); color:#fff; padding:18px 24px; border-radius:12px 12px 0 0; display:flex; justify-content:space-between; align-items:center; }
+  .modal-header h2 { font-size:1.1rem; }
+  .modal-close { background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; line-height:1; }
+  .modal-body { padding:20px 24px; }
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .info-item { padding:8px 0; border-bottom:1px solid #f0f0f0; }
+  .info-item .label { font-size:.7rem; text-transform:uppercase; color:#888; margin-bottom:2px; }
+  .info-item .value { font-size:.9rem; font-weight:500; }
+  .section-title { font-size:.85rem; font-weight:600; color:#0078d4; margin:18px 0 8px; padding-bottom:4px; border-bottom:2px solid #e8f0fe; }
+  .equip-table { width:100%; border-collapse:collapse; font-size:.82rem; box-shadow:none; }
+  .equip-table th { background:#f8f9fa; color:#333; padding:8px 10px; text-align:left; font-size:.72rem; text-transform:uppercase; }
+  .equip-table td { padding:8px 10px; border-bottom:1px solid #eee; }
+  .modal-footer { padding:14px 24px; border-top:1px solid #eee; display:flex; justify-content:flex-end; gap:10px; }
+  .add-equip-row { margin-top:8px; }
+  .hidden { display:none !important; }
+  .domain-filter { background:#fff; border-radius:8px; padding:12px 16px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .domain-filter label { font-size:.8rem; font-weight:600; color:#555; white-space:nowrap; }
+  .domain-chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .domain-chip { padding:4px 12px; border-radius:14px; font-size:.78rem; cursor:pointer; border:2px solid #0078d4; color:#0078d4; background:#e8f0fe; transition:all .2s; user-select:none; }
+  .domain-chip:hover { background:#d0e3f7; }
+  .domain-chip.active { background:#0078d4; color:#fff; }
+  .domain-chip .count { opacity:.7; font-size:.7rem; margin-left:4px; }
+  .domain-input { padding:5px 10px; border:1px solid #ccc; border-radius:6px; font-size:.8rem; width:180px; }
+  .filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+  .filter-bar select { padding:7px 10px; border:1px solid #ccc; border-radius:6px; font-size:.82rem; background:#fff; }
+  .count-line { font-size:.8rem; color:#666; margin-left:auto; }
+  .notice { background:#e8f0fe; color:#184b8a; border-radius:8px; padding:9px 12px; font-size:.8rem; margin-top:12px; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-group { display:flex; flex-direction:column; }
+  .form-group.full { grid-column:1/-1; }
+  .form-group label { font-size:.72rem; text-transform:uppercase; color:#888; margin-bottom:4px; font-weight:600; }
+  .form-group input, .form-group select { padding:8px 12px; border:1px solid #ddd; border-radius:6px; font-size:.88rem; }
+  .form-group input:focus, .form-group select:focus { outline:none; border-color:#0078d4; box-shadow:0 0 0 2px rgba(0,120,212,.15); }
+  .form-section { margin-top:20px; }
+  .form-section h3 { font-size:.9rem; color:#0078d4; margin-bottom:10px; padding-bottom:4px; border-bottom:2px solid #e8f0fe; }
+  .equip-form-row { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr auto; gap:8px; margin-bottom:8px; align-items:end; }
+  .equip-form-row input { padding:6px 10px; border:1px solid #ddd; border-radius:5px; font-size:.8rem; }
+  .equip-form-row label { font-size:.68rem; color:#888; text-transform:uppercase; display:block; margin-bottom:3px; }
+  .tabs { display:flex; gap:0; margin-bottom:0; border-bottom:2px solid #e0e0e0; }
+  .tab { padding:12px 24px; font-size:.9rem; font-weight:600; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all .2s; color:#666; }
+  .tab:hover { color:#0078d4; background:#f5f9ff; }
+  .tab.active { color:#0078d4; border-bottom-color:#0078d4; }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+  .group-table thead { background:#e65100; }
+  .profile-table thead { background:#7b2ff7; }
+  .profile-groups { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+  .profile-group-tag { background:#f3e5f5; color:#7b1fa2; padding:2px 8px; border-radius:8px; font-size:.72rem; }
+  .toast { position:fixed; bottom:20px; right:20px; max-width:440px; background:#1a1a2e; color:#fff; padding:12px 16px; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.25); font-size:.85rem; line-height:1.4; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; z-index:3000; white-space:pre-line; }
+  .toast.show { opacity:1; transform:none; }
+  .toast.warn { background:#a15c00; }
+  .sel-col { width:36px; text-align:center; }
+  .sel-col input { width:16px; height:16px; cursor:pointer; }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .btn-request { background:#e65100; color:#fff; }
+  .btn-request:hover { background:#bf360c; }
+  select.role-sel { padding:8px 10px; border-radius:6px; border:none; font-size:.85rem; }
+  /* Mode Lecteur : masque les actions d'administration */
+  body.lecteur .btn-add, body.lecteur .btn-danger, body.lecteur .btn-profile, body.lecteur .btn-edit,
+  body.lecteur [onclick*="csvFile"], body.lecteur #btnDelUsers, body.lecteur #btnDelGroups, body.lecteur #btnBulkProfile, body.lecteur #ignoreInput { display:none !important; }
+  body:not(.lecteur) .btn-request { display:none !important; }
+  @media(max-width:768px){ .info-grid,.form-grid{grid-template-columns:1fr;} .search-box{width:100%;} .equip-form-row{grid-template-columns:1fr 1fr;} .tabs{flex-wrap:wrap;} }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>📋 Suivi Utilisateurs – Tenant M365</h1>
+    <div class="toolbar">
+      <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden">
+      <select id="roleSel" class="role-sel" onchange="setRole(this.value)" title="Contrôle d'interface local, non sécurisé">
+        <option value="admin">👑 Administrateur</option>
+        <option value="lecteur">👁️ Lecteur</option>
+      </select>
+      <button class="btn btn-sm" onclick="changeAdminPassword()" title="Changer le mot de passe administrateur">🔑 Mot de passe</button>
+      <button class="btn btn-add" onclick="openAddModal()">➕ Ajouter</button>
+      <button class="btn btn-primary" onclick="document.getElementById('csvFile').click()">📂 Importer CSV</button>
+      <button class="btn btn-success" onclick="exportCSV()">💾 Exporter CSV</button>
+      <button class="btn btn-edit" id="editToggle" onclick="toggleEdit()">✏️ Mode Modification</button>
+      <button class="btn btn-danger" onclick="resetAll()">🗑️ Réinitialiser</button>
+    </div>
+  </header>
+
+  <div class="domain-filter" style="background:#fff8e1">
+    <label>🚫 Désactivés :</label>
+    <div class="domain-chips" id="ignoreChips"></div>
+    <input type="text" class="domain-input" id="ignoreInput" placeholder="domaine ou adresse (ex: externe@domaine.fr)" onkeydown="if(event.key==='Enter')addIgnored()">
+    <button class="btn btn-danger btn-sm" onclick="addIgnored()">Désactiver</button>
+    <span class="count-line" id="ignoreCount"></span>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('users',this)">👥 Utilisateurs</div>
+    <div class="tab" onclick="switchTab('groups',this)">📁 Groupes & Listes</div>
+    <div class="tab" onclick="switchTab('materiel',this)">🖥️ Matériel</div>
+    <div class="tab" onclick="switchTab('profiles',this)">🎭 Profils</div>
+    <div class="tab" onclick="switchTab('requests',this)">📨 Demandes<span id="reqCount"></span></div>
+  </div>
+
+  <!-- ═══════════ TAB UTILISATEURS ═══════════ -->
+  <div class="tab-content active" id="tab-users">
+    <div class="stats" style="margin-top:15px">
+      <div class="stat-card"><div class="num" id="statTotal">0</div><div class="label">Utilisateurs</div></div>
+      <div class="stat-card"><div class="num" id="statActive">0</div><div class="label">Actifs</div></div>
+      <div class="stat-card"><div class="num" id="statEquip">0</div><div class="label">Équipements</div></div>
+      <div class="stat-card"><div class="num" id="statDepts">0</div><div class="label">Départements</div></div>
+    </div>
+    <div class="domain-filter">
+      <label>🌐 Domaines :</label>
+      <div class="domain-chips" id="domainChips"></div>
+      <input type="text" class="domain-input" id="domainInput" placeholder="Domaine (ex: contoso.com)" onkeydown="if(event.key==='Enter')addDomainFilter()">
+      <button class="btn btn-primary btn-sm" onclick="addDomainFilter()">+ Ajouter</button>
+    </div>
+    <div class="filter-bar">
+      <input type="text" class="search-box" id="userSearch" placeholder="🔍 Rechercher (nom, email, service, fonction…)" oninput="renderTable()">
+      <select id="fStatus" onchange="renderTable()">
+        <option value="">Tous les statuts</option>
+        <option value="Actif">Actifs</option>
+        <option value="Inactif">Inactifs</option>
+      </select>
+      <select id="fProfile" onchange="renderTable()"></select>
+      <select id="fDept" onchange="renderTable()"></select>
+      <select id="fEquip" onchange="renderTable()">
+        <option value="">Équipements : tous</option>
+        <option value="yes">Avec équipement</option>
+        <option value="no">Sans équipement</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="resetUserFilters()">Effacer les filtres</button>
+      <button class="btn btn-danger btn-sm" id="btnDelUsers" onclick="deleteSelectedUsers()" disabled>🗑️ Supprimer la sélection</button>
+      <button class="btn btn-primary btn-sm" onclick="removeDuplicateUsers()" title="Supprime les utilisateurs au même UPN (garde le premier)">🧹 Doublons</button>
+      <button class="btn btn-profile btn-sm" id="btnBulkProfile" onclick="openBulkProfile()" title="Change le profil des utilisateurs filtrés (ou sélectionnés)">🎭 Changer le profil…</button>
+      <span class="count-line" id="userCount"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="userTable">
+        <thead>
+          <tr>
+            <th class="sel-col"><input type="checkbox" id="selAllUsers" title="Tout sélectionner (lignes affichées)" onchange="toggleAllUsers(this.checked)"></th>
+            <th class="sortable" data-sort="displayName" onclick="sortBy('users','displayName')">Nom <span class="arrow"></span></th>
+            <th class="sortable" data-sort="upn" onclick="sortBy('users','upn')">Email (UPN) <span class="arrow"></span></th>
+            <th class="sortable" data-sort="department" onclick="sortBy('users','department')">Département <span class="arrow"></span></th>
+            <th class="sortable" data-sort="profile" onclick="sortBy('users','profile')">Profil <span class="arrow"></span></th>
+            <th class="sortable" data-sort="office" onclick="sortBy('users','office')">Bureau <span class="arrow"></span></th>
+            <th class="sortable" data-sort="phone" onclick="sortBy('users','phone')">Téléphone <span class="arrow"></span></th>
+            <th class="sortable" data-sort="status" onclick="sortBy('users','status')">Statut <span class="arrow"></span></th>
+            <th class="sortable" data-sort="equipCount" onclick="sortBy('users','equipCount')">Équipements <span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB GROUPES ═══════════ -->
+  <div class="tab-content" id="tab-groups">
+    <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <h2 style="font-size:1.1rem; color:#e65100;">📁 Groupes & Listes de diffusion</h2>
+      <div class="toolbar">
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('csvFile').click()">📂 Importer (CSV Microsoft)</button>
+        <button class="btn btn-success btn-sm" onclick="exportGroupsCSV()">💾 Exporter</button>
+        <button class="btn btn-add" onclick="openGroupModal()">➕ Ajouter un groupe</button>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <input type="text" class="search-box" id="groupSearch" placeholder="🔍 Rechercher (nom, email, description…)" oninput="renderGroups()">
+      <select id="gType" onchange="renderGroups()"></select>
+      <button class="btn btn-primary btn-sm" onclick="resetGroupFilters()">Effacer les filtres</button>
+      <button class="btn btn-danger btn-sm" id="btnDelGroups" onclick="deleteSelectedGroups()" disabled>🗑️ Supprimer la sélection</button>
+      <button class="btn btn-primary btn-sm" onclick="removeDuplicateGroups()" title="Supprime les groupes ayant la même adresse (ou même nom sans adresse)">🧹 Doublons</button>
+      <span class="count-line" id="groupCount"></span>
+    </div>
+    <div class="notice">ℹ️ L'export Microsoft ne contient pas les membres. La colonne « Utilisateurs (via profils) » est calculée localement à partir des profils.</div>
+    <div style="margin-top:12px; overflow-x:auto;">
+      <table class="group-table" id="groupTable">
+        <thead>
+          <tr>
+            <th class="sel-col"><input type="checkbox" id="selAllGroups" title="Tout sélectionner (lignes affichées)" onchange="toggleAllGroups(this.checked)"></th>
+            <th class="sortable" data-sort="name" onclick="sortBy('groups','name')">Nom <span class="arrow"></span></th>
+            <th class="sortable" data-sort="email" onclick="sortBy('groups','email')">Adresse <span class="arrow"></span></th>
+            <th class="sortable" data-sort="type" onclick="sortBy('groups','type')">Type <span class="arrow"></span></th>
+            <th class="sortable" data-sort="desc" onclick="sortBy('groups','desc')">Description <span class="arrow"></span></th>
+            <th class="sortable" data-sort="created" onclick="sortBy('groups','created')">Créé le <span class="arrow"></span></th>
+            <th class="sortable" data-sort="visibility" onclick="sortBy('groups','visibility')">Confidentialité <span class="arrow"></span></th>
+            <th class="sortable" data-sort="profileCount" onclick="sortBy('groups','profileCount')">Utilisateurs (via profils) <span class="arrow"></span></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="groupBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB DEMANDES ═══════════ -->
+  <div class="tab-content" id="tab-requests">
+    <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <h2 style="font-size:1.1rem; color:#e65100;">📨 Demandes de changement de profil</h2>
+      <select id="reqFilter" onchange="renderRequests()" style="padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.82rem;background:#fff">
+        <option value="">Toutes</option>
+        <option value="En attente">En attente</option>
+        <option value="Approuvée">Approuvées</option>
+        <option value="Refusée">Refusées</option>
+        <option value="Obsolète">Obsolètes</option>
+      </select>
+    </div>
+    <div class="notice" id="reqAdminInfo"></div>
+    <div style="margin-top:12px; overflow-x:auto;">
+      <table class="group-table">
+        <thead><tr><th>Date</th><th>Demandeur</th><th>Utilisateur</th><th>Changement</th><th>Motif</th><th>Statut</th><th></th></tr></thead>
+        <tbody id="reqBody"></tbody>
+      </table>
+    </div>
+    <h3 style="font-size:.95rem; margin:24px 0 8px; color:#555;">🧾 Journal des décisions</h3>
+    <div style="overflow-x:auto;">
+      <table class="equip-table" style="background:#fff;border-radius:8px">
+        <thead><tr><th>Date</th><th>Action</th><th>Par</th><th>Détail</th></tr></thead>
+        <tbody id="auditBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB MATÉRIEL ═══════════ -->
+  <div class="tab-content" id="tab-materiel">
+    <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <h2 style="font-size:1.1rem; color:#1565c0;">🖥️ Matériel</h2>
+      <span class="count-line" id="matCount"></span>
+    </div>
+    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+      <input type="text" id="matSearch" oninput="renderMateriel()" placeholder="Rechercher (nom, utilisateur, série, identifiant…)" style="flex:1;min-width:220px;padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.85rem">
+      <select id="matStatus" onchange="renderMateriel()" style="padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:.82rem;background:#fff">
+        <option value="">Tous les statuts</option>
+        <option value="Attribué">Attribués</option>
+        <option value="Désactivé">Désactivés</option>
+      </select>
+    </div>
+    <div style="margin-top:12px; overflow-x:auto;">
+      <table class="equip-table" style="background:#fff;border-radius:8px">
+        <thead><tr><th>Appareil</th><th>Propriétaire</th><th>Type</th><th>Système / notes</th><th>Série</th><th>Identifiant Entra</th><th>Statut</th></tr></thead>
+        <tbody id="matBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ TAB PROFILS ═══════════ -->
+  <div class="tab-content" id="tab-profiles">
+    <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <h2 style="font-size:1.1rem; color:#7b2ff7;">🎭 Profils d'accès</h2>
+      <button class="btn btn-profile" onclick="openProfileModal()">➕ Créer un profil</button>
+    </div>
+    <div style="margin-top:15px; overflow-x:auto;">
+      <table class="profile-table" id="profileTable">
+        <thead><tr><th>Nom du profil</th><th>Groupes / Listes incluses</th><th>Utilisateurs assignés</th><th></th></tr></thead>
+        <tbody id="profileBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Détail Utilisateur -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header"><h2 id="modalTitle">Détails Utilisateur</h2><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteUser()">🗑️ Supprimer</button>
+      <button class="btn btn-request btn-sm" onclick="openRequestModal()">📝 Demander un changement de profil</button>
+      <button class="btn btn-primary" onclick="closeModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ajout Utilisateur -->
+<div class="modal-overlay" id="addModalOverlay">
+  <div class="modal">
+    <div class="modal-header" style="background:linear-gradient(135deg,#00b294,#008f76)"><h2>➕ Nouvel Utilisateur</h2><button class="modal-close" onclick="closeAddModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Email (UPN) *</label><input type="text" id="addUpn" placeholder="prenom.nom@domaine.com"></div>
+        <div class="form-group"><label>Nom d'affichage *</label><input type="text" id="addDisplayName" placeholder="Dupont Jean"></div>
+        <div class="form-group"><label>Profil</label><select id="addProfile"><option value="">— Aucun —</option></select></div>
+        <div class="form-group"><label>Prénom</label><input type="text" id="addFirstName" placeholder="Jean"></div>
+        <div class="form-group"><label>Nom</label><input type="text" id="addLastName" placeholder="Dupont"></div>
+        <div class="form-group"><label>Département</label><input type="text" id="addDepartment" placeholder="IT, RH, Finance..."></div>
+        <div class="form-group"><label>Poste / Fonction</label><input type="text" id="addTitle" placeholder="Développeur, Manager..."></div>
+        <div class="form-group"><label>Bureau</label><input type="text" id="addOffice" placeholder="Bât A – 204"></div>
+        <div class="form-group"><label>Ville</label><input type="text" id="addCity" placeholder="Paris"></div>
+        <div class="form-group"><label>Téléphone</label><input type="tel" id="addPhone" placeholder="+33 6 12 34 56 78"></div>
+        <div class="form-group"><label>Statut</label><select id="addStatus"><option value="Actif">Actif</option><option value="Inactif">Inactif</option></select></div>
+      </div>
+      <div class="form-section">
+        <h3>🔧 Équipements</h3>
+        <div id="addEquipList"></div>
+        <button class="btn btn-success btn-sm" onclick="addEquipFormRow()">+ Ajouter un équipement</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="closeAddModal()">Annuler</button>
+      <button class="btn btn-add" onclick="saveNewUser()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Groupe -->
+<div class="modal-overlay" id="groupModalOverlay">
+  <div class="modal" style="max-width:550px">
+    <div class="modal-header" style="background:linear-gradient(135deg,#e65100,#bf360c)"><h2 id="groupModalTitle">➕ Nouveau Groupe</h2><button class="modal-close" onclick="closeGroupModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Nom *</label><input type="text" id="grpName" placeholder="Groupe IT"></div>
+        <div class="form-group"><label>Email</label><input type="text" id="grpEmail" placeholder="groupe-it@contoso.com"></div>
+        <div class="form-group full"><label>Type</label><select id="grpType"></select></div>
+        <div class="form-group full"><label>Description</label><input type="text" id="grpDesc" placeholder="Groupe de travail IT"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="closeGroupModal()">Annuler</button>
+      <button class="btn btn-add" onclick="saveGroup()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Profil -->
+<div class="modal-overlay" id="profileModalOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header" style="background:linear-gradient(135deg,#7b2ff7,#5c1fb8)"><h2 id="profileModalTitle">➕ Nouveau Profil</h2><button class="modal-close" onclick="closeProfileModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px"><label>Nom du profil *</label><input type="text" id="profName" placeholder="Profil IT Standard"></div>
+      <div class="form-group" style="margin-bottom:14px"><label>Description</label><input type="text" id="profDesc" placeholder="Accès groupes IT + listes RH"></div>
+      <div class="form-group" style="margin-bottom:14px"><label>Couleur de l'étiquette</label><input type="color" id="profColor" value="#7b2ff7" style="width:80px;height:36px;padding:2px;border:1px solid #ddd;border-radius:6px;cursor:pointer"></div>
+      <div class="form-section">
+        <h3>📁 Groupes / Listes incluses</h3>
+        <div id="profGroupList"></div>
+        <button class="btn btn-success btn-sm" onclick="addProfGroupRow()">+ Ajouter un groupe</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="closeProfileModal()">Annuler</button>
+      <button class="btn btn-profile" onclick="saveProfile()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Changement de profil en masse -->
+<div class="modal-overlay" id="bulkOverlay">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header" style="background:linear-gradient(135deg,#7b2ff7,#5c1fb8)"><h2>🎭 Changer le profil en masse</h2><button class="modal-close" onclick="closeBulkProfile()">×</button></div>
+    <div class="modal-body">
+      <p class="notice" id="bulkScope"></p>
+      <div id="bulkBreakdown" style="margin:14px 0;font-size:.85rem;line-height:1.6"></div>
+      <div class="form-group"><label>Nouveau profil</label><select id="bulkTo"></select></div>
+      <p style="font-size:.8rem;color:#666;margin-top:10px">Seul le profil change. « — Aucun — » retire le profil des utilisateurs concernés.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeBulkProfile()">Annuler</button>
+      <button class="btn btn-profile" onclick="applyBulkProfile()">✅ Appliquer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Demande de changement de profil (mode Lecteur) -->
+<div class="modal-overlay" id="reqModalOverlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header" style="background:linear-gradient(135deg,#e65100,#bf360c)"><h2>📝 Demande de changement de profil</h2><button class="modal-close" onclick="closeRequestModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>Utilisateur</label><input type="text" id="reqUser" disabled></div>
+        <div class="form-group"><label>Profil actuel</label><input type="text" id="reqFrom" disabled></div>
+        <div class="form-group"><label>Profil demandé *</label><select id="reqTo"></select></div>
+        <div class="form-group full"><label>Votre nom *</label><input type="text" id="reqWho" placeholder="Prénom Nom"></div>
+        <div class="form-group full"><label>Motif * (5 caractères minimum)</label><textarea id="reqReason" rows="3" style="padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:.88rem"></textarea></div>
+      </div>
+      <p class="notice" style="margin-top:14px">La demande n'est pas appliquée tant que l'administrateur ne l'a pas approuvée.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeRequestModal()">Annuler</button>
+      <button class="btn btn-request" onclick="submitRequest()">📨 Envoyer la demande</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Utilisateurs d'un profil -->
+<div class="modal-overlay" id="profUsersOverlay">
+  <div class="modal" style="max-width:850px">
+    <div class="modal-header" style="background:linear-gradient(135deg,#7b2ff7,#5c1fb8)"><h2 id="profUsersTitle">Utilisateurs</h2><button class="modal-close" onclick="closeProfileUsers()">×</button></div>
+    <div class="modal-body" id="profUsersBody"></div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeProfileUsers()">Fermer</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// ===PURE===  (fonctions sans DOM, testables isolément)
+const GROUP_TYPES = ['Groupe Microsoft 365', 'Groupe de sécurité', 'Groupe de sécurité à extension messagerie', 'Liste de diffusion'];
+
+// Alias de colonnes, en minuscules, sans BOM ni espaces superflus
+const USER_MAP = {
+  upn: ['userprincipalname', 'user principal name', 'upn', 'email', 'e-mail', 'email address', 'adresse e-mail'],
+  displayName: ['displayname', 'display name', 'nom complet', 'nom', "nom d'affichage"],
+  firstName: ['firstname', 'first name', 'prénom', 'prenom'],
+  lastName: ['lastname', 'last name', 'nom de famille'],
+  department: ['department', 'service', 'département', 'departement'],
+  office: ['office', 'officelocation', 'bureau'],
+  phone: ['mobilephone', 'mobile phone', 'téléphone', 'telephone', 'phone'],
+  city: ['city', 'ville'],
+  title: ['title', 'jobtitle', 'job title', 'poste', 'fonction'],
+  status: ['accountenabled', 'account enabled', 'statut', 'status'],
+  profile: ['profil', 'profile'],
+  mail: ['mail', 'primary smtp address'],
+  proxy: ['proxy addresses', 'proxyaddresses'],   // export Entra : SMTP:principale;smtp:alias1;smtp:alias2
+  blocked: ['block credential'],                  // True = connexion bloquée
+  deleted: ['soft deletion time stamp']           // rempli = compte dans la corbeille
+};
+
+// Export « Groupes Microsoft 365 / Exchange » (en-têtes en français)
+const GROUP_MAP = {
+  id: ['id de groupe', 'group id', 'objectid'],
+  name: ['nom du groupe', 'group name', 'display name', 'nom'],
+  email: ['adresse e-mail principale du groupe', 'primary smtp address', 'adresse e-mail principale', 'mail', 'email'],
+  desc: ['description'],
+  type: ['type de groupe', 'group type'],
+  security: ['securityenabled', 'security enabled'],
+  visibility: ['confidentialité du groupe', 'visibility'],
+  domain: ['domaine de groupe', 'group domain'],
+  created: ['date de création', 'date de creation', 'created'],
+  dynamic: ['appartenance dynamique', 'dynamic membership'],
+  teams: ['inclut teams', 'teams enabled']
+};
+
+function stripBOM(t) { return String(t).replace(/^﻿/, ''); }
+
+function normHeader(h) {
+  return String(h ?? '').replace(/﻿/g, '').trim().toLowerCase().replace(/’/g, "'").replace(/\s+/g, ' ');
+}
+
+// Détecte le séparateur d'après la ligne d'en-tête (hors guillemets)
+function detectSep(text) {
+  const first = text.split(/\r?\n/)[0] || '';
+  let inQ = false, semi = 0, comma = 0;
+  for (const c of first) {
+    if (c === '"') inQ = !inQ;
+    else if (!inQ) { if (c === ';') semi++; else if (c === ',') comma++; }
+  }
+  return semi > comma ? ';' : ',';
+}
+
+// Parseur CSV conforme RFC 4180 : guillemets, guillemets doublés, retours à la ligne dans les champs
+function parseCSV(text, sep) {
+  const rows = [];
+  let row = [], cur = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === sep) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cur); rows.push(row); row = []; cur = '';
+    } else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.map(r => r.map(v => v.trim())).filter(r => r.some(v => v !== ''));
+}
+
+function buildIndex(headers, map) {
+  const idx = {};
+  headers.forEach((h, j) => {
+    const n = normHeader(h);
+    for (const k in map) if (idx[k] === undefined && map[k].includes(n)) idx[k] = j;
+  });
+  return idx;
+}
+
+function isGroupHeaders(headers) {
+  const i = buildIndex(headers, GROUP_MAP);
+  return i.name !== undefined && (i.id !== undefined || i.type !== undefined);
+}
+
+// Convertit « Type de groupe » + SecurityEnabled vers les 4 types de l'application
+function classifyGroup(label, secFlag) {
+  const t = normHeader(label);
+  if (t.includes('microsoft 365')) return 'Groupe Microsoft 365';
+  if (t.includes('extension')) return 'Groupe de sécurité à extension messagerie';
+  if (t.includes('sécurité') || t.includes('securite') || t.includes('security')) return 'Groupe de sécurité';
+  if (t.includes('distribution') || t.includes('diffusion')) return 'Liste de diffusion';
+  return secFlag ? 'Groupe de sécurité' : 'Liste de diffusion';
+}
+
+function toISODate(s) { const m = String(s ?? '').match(/^(\d{4}-\d{2}-\d{2})/); return m ? m[1] : ''; }
+function truthy(v) { return String(v ?? '').trim().toLowerCase() === 'true'; }
+
+function groupFromRow(cols, idx) {
+  const get = k => idx[k] !== undefined ? String(cols[idx[k]] ?? '').trim() : '';
+  const name = get('name');
+  if (!name) return null;
+  const sec = truthy(get('security'));
+  return {
+    id: get('id'), name,
+    email: get('email').toLowerCase(),
+    desc: get('desc'),
+    type: classifyGroup(get('type'), sec),
+    securityEnabled: sec,
+    visibility: get('visibility'),
+    domain: get('domain'),
+    created: toISODate(get('created')),
+    dynamic: truthy(get('dynamic')),
+    teams: truthy(get('teams')),
+    source: 'import'
+  };
+}
+
+function normalizeGroupLike(g) {
+  return { id: '', email: '', desc: '', type: 'Groupe Microsoft 365', created: '', visibility: '', securityEnabled: false, ...g };
+}
+
+function normalizeUser(u) {
+  const base = { upn: '', mail: '', aliases: [], displayName: '', firstName: '', lastName: '', department: '', office: '', phone: '', city: '', title: '', status: 'Actif', profile: '' };
+  const x = { ...base, ...u, equipment: Array.isArray(u.equipment) ? u.equipment : [] };
+  delete x.type;
+  return x;
+}
+
+function userFromRow(cols, idx) {
+  const get = k => idx[k] !== undefined ? String(cols[idx[k]] ?? '').trim() : '';
+  if (get('deleted')) return null; // compte supprimé (corbeille) : ignoré
+  // « Proxy addresses » : « SMTP:principale » en majuscules, « smtp:alias » en minuscules
+  const proxies = get('proxy').split(';').map(s => s.trim()).filter(Boolean);
+  const primary = (proxies.find(p => p.startsWith('SMTP:')) || '').slice(5);
+  const aliases = [...new Set(proxies.map(p => p.replace(/^smtp:/i, '').toLowerCase()).filter(a => a.includes('@')))];
+  const row = {
+    upn: get('upn').toLowerCase(), displayName: get('displayName'), firstName: get('firstName'),
+    lastName: get('lastName'), department: get('department'), office: get('office'),
+    phone: get('phone'), city: get('city'), title: get('title'), profile: get('profile'),
+    mail: (get('mail') || primary).toLowerCase(), aliases
+  };
+  if (idx.status !== undefined) {
+    const v = get('status').toLowerCase();
+    row.status = (v === 'false' || v === 'inactif' || v === 'inactive' || v === 'disabled') ? 'Inactif' : 'Actif';
+  }
+  if (get('blocked').toLowerCase() === 'true') row.status = 'Inactif';
+  return row;
+}
+
+// Fusion par ID puis par adresse (puis par nom si pas d'adresse). Ne remplace que les champs renseignés.
+function mergeGroups(existing, incoming) {
+  let created = 0, updated = 0;
+  for (const ng of incoming) {
+    const clean = Object.fromEntries(Object.entries(ng).filter(([, v]) => v !== '' && v !== undefined && v !== null));
+    let i = -1;
+    if (ng.id) i = existing.findIndex(g => g.id === ng.id);
+    if (i < 0 && ng.email) i = existing.findIndex(g => (g.email || '').toLowerCase() === ng.email);
+    if (i < 0 && !ng.email) i = existing.findIndex(g => !g.email && (g.name || '').toLowerCase() === ng.name.toLowerCase());
+    if (i < 0) { existing.push(normalizeGroupLike(clean)); created++; }
+    else { existing[i] = { ...existing[i], ...clean }; updated++; }
+  }
+  return { created, updated };
+}
+
+function mergeUsers(existing, incoming) {
+  let created = 0, updated = 0;
+  for (const nu of incoming) {
+    const i = existing.findIndex(u => userKey(u) === userKey(nu));
+    if (i < 0) { existing.push(normalizeUser(nu)); created++; }
+    else {
+      const clean = Object.fromEntries(Object.entries(nu).filter(([, v]) => v !== '' && v !== undefined));
+      existing[i] = { ...existing[i], ...clean };
+      updated++;
+    }
+  }
+  return { created, updated };
+}
+// ─── Domaines / adresses désactivés ───
+// Entrée sans « @ » = domaine entier ; entrée avec « @ » = adresse précise
+function normIgnoreEntry(s) { return String(s || '').trim().toLowerCase().replace(/^@/, ''); }
+// Compare une entrée (avec joker « * » possible) à une adresse ou un domaine
+function ignoreMatches(entry, value) {
+  if (!entry.includes('*')) return entry === value;
+  const re = new RegExp('^' + entry.split('*').map(s => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
+  return re.test(value);
+}
+function isIgnoredAddress(addr, ignoredList) {
+  const a = String(addr || '').trim().toLowerCase();
+  if (!a || !ignoredList || !ignoredList.length) return false;
+  const domain = a.includes('@') ? a.split('@').pop() : '';
+  return ignoredList.some(e => ignoreMatches(e, a) || (domain && !e.includes('@') && ignoreMatches(e, domain)));
+}
+// Adresse réelle d'un compte invité : « external_domaine.fr#EXT#@tenant… » → « external@domaine.fr »
+function decodeGuestUPN(upn) {
+  const m = String(upn || '').toLowerCase().match(/^(.+)#ext#@/);
+  if (!m) return '';
+  const base = m[1], i = base.lastIndexOf('_');
+  return i > 0 ? base.slice(0, i) + '@' + base.slice(i + 1) : '';
+}
+// Toutes les adresses d'un compte : UPN, adresse Mail, adresse réelle des invités
+function accountAddresses(u) {
+  return [u.upn, u.mail, decodeGuestUPN(u.upn), ...(u.aliases || [])].map(a => String(a || '').trim().toLowerCase()).filter(Boolean);
+}
+function isIgnoredUser(u, ignoredList) {
+  return accountAddresses(u).some(a => isIgnoredAddress(a, ignoredList));
+}
+
+// ─── Anti-doublon ───
+// Clé d'unicité d'un groupe : adresse e-mail si présente, sinon nom (insensible à la casse et aux espaces)
+function groupKey(g) {
+  const mail = String(g.email || '').trim().toLowerCase();
+  return mail ? 'mail:' + mail : 'name:' + String(g.name || '').trim().toLowerCase();
+}
+// Clé d'unicité d'un utilisateur : UPN
+function userKey(u) { return String(u.upn || '').trim().toLowerCase(); }
+// Une clé vide (« name: » ou « ») ne compte jamais comme doublon
+function validKey(k) { return !!k && !/:$/.test(k); }
+// Index des occurrences en double (la première est toujours conservée)
+function duplicateIndexes(list, keyFn) {
+  const seen = new Set(), dups = [];
+  list.forEach((item, i) => {
+    const k = keyFn(item);
+    if (!validKey(k)) return;
+    if (seen.has(k)) dups.push(i); else seen.add(k);
+  });
+  return dups;
+}
+// Index d'un élément existant ayant la même clé que le candidat, ou -1
+function findDuplicate(list, candidate, keyFn, exceptIdx = -1) {
+  const k = keyFn(candidate);
+  if (!validKey(k)) return -1;
+  return list.findIndex((x, i) => i !== exceptIdx && keyFn(x) === k);
+}
+// Liste sans doublons (garde la première occurrence)
+function uniqueBy(list, keyFn) {
+  const drop = new Set(duplicateIndexes(list, keyFn));
+  return list.filter((_, i) => !drop.has(i));
+}
+// ─── Import du matériel (postes) ───
+// Alias de colonnes : à confirmer avec l'export réel (en-têtes détectés affichés en cas d'échec)
+// Export réel « Entra ID / Intune » : colonnes displayName, owner (nom affiché OU UPN), deviceId, accountEnabled, trustType…
+const DEVICE_MAP = {
+  owner: ['owner', 'primary user upn', 'primary user', 'userprincipalname', 'user principal name', 'upn', 'utilisateur principal', 'utilisateur', 'user'],
+  name: ['displayname', 'device name', 'devicename', "nom de l'appareil", 'nom de la machine', 'computer name', 'hostname'],
+  deviceId: ['deviceid', 'device id'],
+  serial: ['serial number', 'serialnumber', 'numéro de série', 'numero de serie', 'n° de série', 'série', 'serie'],
+  model: ['model', 'device model', 'modèle', 'modele'],
+  manufacturer: ['manufacturer', 'fabricant'],
+  os: ['operatingsystem', 'operating system', 'os', "système d'exploitation", "systeme d'exploitation"],
+  osVersion: ['operatingsystemversion', 'operating system version', 'version'],
+  trust: ['trusttype', 'trust type'],
+  enabled: ['accountenabled', 'account enabled', 'activé', 'active'],
+  asset: ['asset tag', 'asset', 'inventaire', "n° d'inventaire", 'tag inventaire']
+};
+// Détecte un export d'appareils : identifiant d'appareil, numéro de série ou nom d'appareil
+function isDeviceHeaders(headers) {
+  const i = buildIndex(headers, DEVICE_MAP);
+  return i.deviceId !== undefined || i.serial !== undefined || i.name !== undefined;
+}
+function deviceFromRow(cols, idx) {
+  const get = k => idx[k] !== undefined ? String(cols[idx[k]] ?? '').trim() : '';
+  const deviceId = get('deviceId'), serial = get('serial'), name = get('name');
+  if (!deviceId && !serial && !name) return null;
+  const en = get('enabled').toLowerCase();
+  return {
+    owner: get('owner'), deviceId, serial, name, model: get('model'), manufacturer: get('manufacturer'),
+    os: get('os'), osVersion: get('osVersion'), trust: get('trust'), asset: get('asset'),
+    enabled: en === '' ? null : ['true', 'vrai', 'oui', 'yes', '1'].includes(en)
+  };
+}
+// Compare deux noms affichés sans tenir compte de la casse ni des espaces multiples
+const normName = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+// ===END PURE===
+
+// ─── Données ───
+const LS = { users: 'm365users', groups: 'm365groups', profiles: 'm365profiles', ignored: 'm365ignored' };
+const UPN_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const sortState = { users: { key: 'displayName', dir: 1 }, groups: { key: 'name', dir: 1 } };
+let editMode = false, selectedIdx = -1, selectedDomains = new Set(), editingGroupIdx = -1, editingProfileIdx = -1;
+let selUsers = new Set(), selGroups = new Set(); // index des lignes cochées
+
+function load(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const csvCell = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+
+let profiles = load(LS.profiles, []);
+let ignored = load(LS.ignored, []).map(normIgnoreEntry).filter(Boolean); // domaines / adresses désactivés (persistants)
+// Accepte une adresse (groupes) ou un compte utilisateur (toutes ses adresses)
+const isHidden = x => typeof x === 'string' ? isIgnoredAddress(x, ignored) : isIgnoredUser(x, ignored);
+let groups = load(LS.groups, []).map(normalizeGroupLike);
+let users = [];
+(function initData() {
+  // Migration : anciennes entrées « Groupe » / « Liste de diffusion » enregistrées dans la table utilisateurs
+  load(LS.users, []).forEach(u => {
+    if (u.type === 'Groupe' || u.type === 'Liste de diffusion') {
+      const email = (u.upn || '').toLowerCase();
+      if (!email || !groups.some(g => (g.email || '').toLowerCase() === email))
+        groups.push(normalizeGroupLike({ name: u.displayName || u.upn, email, type: u.type, desc: '', source: 'manual' }));
+    } else users.push(normalizeUser(u));
+  });
+})();
+
+function saveAll() {
+  localStorage.setItem(LS.users, JSON.stringify(users));
+  localStorage.setItem(LS.groups, JSON.stringify(groups));
+  localStorage.setItem(LS.profiles, JSON.stringify(profiles));
+  localStorage.setItem(LS.ignored, JSON.stringify(ignored));
+  localStorage.setItem(LS_REQ, JSON.stringify(requests));
+  localStorage.setItem(LS_AUDIT, JSON.stringify(audit));
+}
+
+function renderAll() {
+  renderIgnored();
+  renderDomainChips();
+  renderTable();
+  renderGroups();
+  renderMateriel();
+  renderProfiles();
+  renderRequests();
+  updateStats();
+  applyRole();
+}
+
+// ─── Étiquettes de profil (couleur personnalisée) ───
+// Texte noir ou blanc selon la luminosité de la couleur de fond
+function readableText(hex) {
+  const n = parseInt(String(hex).slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (r * 0.299 + g * 0.587 + b * 0.114) > 160 ? '#1a1a2e' : '#fff';
+}
+function profileChip(name) {
+  if (!name) return '<span style="color:#999">—</span>';
+  const p = profiles.find(x => x.name === name);
+  const c = p && /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : '';
+  const style = c ? `background:${c};color:${readableText(c)}` : '';
+  return `<span class="badge badge-profile" style="${style}">${esc(name)}</span>`;
+}
+
+// ─── Notifications ───
+let toastTimer;
+function toast(msg, ms = 3500, cls = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + cls;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ─── Tabs ───
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+function activateTab(name) {
+  const idx = ['users', 'groups', 'materiel', 'profiles', 'requests'].indexOf(name);
+  switchTab(name, document.querySelectorAll('.tab')[idx]);
+}
+
+// ─── Tri générique ───
+const NUMERIC_KEYS = new Set(['equipCount', 'profileCount']);
+function sortBy(table, key) {
+  const st = sortState[table];
+  if (st.key === key) st.dir *= -1; else { st.key = key; st.dir = 1; }
+  if (table === 'users') renderTable(); else renderGroups();
+}
+function sortRows(list, st, accessors) {
+  const acc = accessors[st.key];
+  if (!acc) return list;
+  const numeric = NUMERIC_KEYS.has(st.key);
+  return list.slice().sort((x, y) => {
+    const a = acc(x.o), b = acc(y.o);
+    if (numeric) return (a - b) * st.dir;
+    const ea = a === '' || a == null, eb = b === '' || b == null;
+    if (ea && eb) return 0;
+    if (ea) return 1;          // les vides en fin de liste
+    if (eb) return -1;
+    return String(a).localeCompare(String(b), 'fr', { numeric: true, sensitivity: 'base' }) * st.dir;
+  });
+}
+function updateArrows(tableId, st) {
+  document.querySelectorAll(`#${tableId} th[data-sort]`).forEach(th => {
+    const a = th.querySelector('.arrow');
+    if (a) a.textContent = th.dataset.sort === st.key ? (st.dir > 0 ? '▲' : '▼') : '';
+  });
+}
+
+// ─── Domaines ───
+function getDomains() {
+  const domains = new Map();
+  users.forEach(u => {
+    if (isHidden(u)) return;
+    if (u.upn && u.upn.includes('@')) {
+      const d = u.upn.split('@')[1].toLowerCase();
+      domains.set(d, (domains.get(d) || 0) + 1);
+    }
+  });
+  return [...domains.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+function renderDomainChips() {
+  const container = document.getElementById('domainChips');
+  container.innerHTML = '';
+  const allChip = document.createElement('span');
+  allChip.className = 'domain-chip' + (selectedDomains.size === 0 ? ' active' : '');
+  allChip.textContent = 'Tous';
+  allChip.onclick = () => { selectedDomains.clear(); renderAll(); };
+  container.appendChild(allChip);
+  getDomains().forEach(([domain, count]) => {
+    const chip = document.createElement('span');
+    chip.className = 'domain-chip' + (selectedDomains.has(domain) ? ' active' : '');
+    chip.innerHTML = `@${esc(domain)}<span class="count">(${count})</span>`;
+    chip.onclick = () => { selectedDomains.has(domain) ? selectedDomains.delete(domain) : selectedDomains.add(domain); renderAll(); };
+    container.appendChild(chip);
+  });
+}
+// Crée dans l'onglet Profils les profils cités par les utilisateurs importés mais absents de la liste
+function ensureProfiles(names) {
+  let created = 0;
+  [...new Set(names.map(n => String(n || '').trim()).filter(Boolean))].forEach(n => {
+    if (!profiles.some(p => p.name === n)) { profiles.push({ name: n, desc: '', groups: [] }); created++; }
+  });
+  return created;
+}
+
+// ─── Désactivation permanente ───
+function renderIgnored() {
+  const c = document.getElementById('ignoreChips');
+  c.innerHTML = '';
+  if (!ignored.length) c.innerHTML = '<span style="font-size:.8rem;color:#888">Aucun</span>';
+  ignored.forEach((e, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'domain-chip';
+    chip.style.cssText = 'border-color:#e65100;color:#e65100;background:#fff3e0';
+    chip.title = 'Cliquer pour réactiver';
+    chip.innerHTML = `${esc(e)} ✕`;
+    chip.onclick = () => reactivateIgnored(i);
+    c.appendChild(chip);
+  });
+  const nU = users.filter(u => isHidden(u)).length;
+  const nG = groups.filter(g => isHidden(g.email)).length;
+  document.getElementById('ignoreCount').textContent = `${nU} utilisateur(s) et ${nG} groupe(s) masqués`;
+}
+function addIgnored() {
+  const input = document.getElementById('ignoreInput');
+  const e = normIgnoreEntry(input.value);
+  if (!e) return;
+  if (/^\*+$/.test(e)) { toast('⚠️ Un joker seul désactiverait tout : précisez le domaine.', 4000, 'warn'); return; }
+  if (!/^[^\s@]+\.[^\s@]+$/.test(e) && !UPN_RE.test(e)) { toast('⚠️ Saisissez un domaine (ex: domaine.fr), une adresse complète, ou un modèle avec * (ex: *-external@domaine.fr).', 5000, 'warn'); return; }
+  input.value = '';
+  if (ignored.includes(e)) { toast(`« ${e} » est déjà désactivé.`); return; }
+  ignored.push(e);
+  saveAll(); renderAll();
+  // Diagnostic : nombre d'éléments réellement concernés par cette entrée
+  const n = users.filter(u => isIgnoredUser(u, [e])).length + groups.filter(g => isIgnoredAddress(g.email, [e])).length;
+  if (n) toast(`🚫 « ${e} » désactivé : ${n} élément(s) concerné(s).`);
+  else toast(`🚫 « ${e} » désactivé, mais aucun élément chargé ne correspond. Si le compte existe, réimportez le CSV utilisateurs (colonne Mail requise).`, 7000, 'warn');
+}
+function reactivateIgnored(i) {
+  const e = ignored[i];
+  ignored.splice(i, 1);
+  saveAll(); renderAll();
+  toast(`✅ « ${e} » réactivé.`);
+}
+
+function addDomainFilter() {
+  const input = document.getElementById('domainInput');
+  const d = input.value.trim().toLowerCase().replace(/^@/, '');
+  if (!d) return;
+  selectedDomains.add(d);
+  input.value = '';
+  renderAll();
+}
+function getUserDomain(u) { return u.upn && u.upn.includes('@') ? u.upn.split('@')[1].toLowerCase() : ''; }
+function matchesDomain(u) { return selectedDomains.size === 0 || selectedDomains.has(getUserDomain(u)); }
+
+// ─── Import CSV (détection automatique : groupes ou utilisateurs) ───
+document.getElementById('csvFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    // Si l'UTF-8 échoue (fichier Excel ANSI), on relit en Windows-1252
+    if (ev.target.result.includes('�')) {
+      const r2 = new FileReader();
+      r2.onload = ev2 => handleCSV(ev2.target.result);
+      r2.readAsText(file, 'windows-1252');
+    } else handleCSV(ev.target.result);
+  };
+  reader.readAsText(file, 'UTF-8');
+});
+
+function handleCSV(raw) {
+  const text = stripBOM(raw);
+  const rows = parseCSV(text, detectSep(text));
+  if (rows.length < 2) { toast('⚠️ Fichier CSV vide ou invalide.', 4000, 'warn'); return; }
+  const headers = rows[0];
+  if (isGroupHeaders(headers)) importGroups(rows, headers);
+  else if (isDeviceHeaders(headers)) importDevices(rows, headers);
+  else importUsers(rows, headers);
+}
+
+function importGroups(rows, headers) {
+  const idx = buildIndex(headers, GROUP_MAP);
+  const allGroups = rows.slice(1).map(c => groupFromRow(c, idx)).filter(Boolean);
+  const incoming = allGroups.filter(g => !isHidden(g.email));
+  const skipped = allGroups.length - incoming.length;
+  if (!incoming.length) { toast('⚠️ Aucun groupe trouvé dans ce fichier.', 4000, 'warn'); return; }
+
+  const res = mergeGroups(groups, incoming);
+  saveAll();
+  renderAll();
+  activateTab('groups');
+
+  const byType = {};
+  incoming.forEach(g => { byType[g.type] = (byType[g.type] || 0) + 1; });
+  const detail = Object.entries(byType).map(([t, n]) => `${t} : ${n}`).join('\n');
+  const noMail = incoming.filter(g => !g.email).length;
+  const suspect = incoming.filter(g => g.email.includes('?')).map(g => g.name);
+  let msg = `✅ ${incoming.length} groupe(s) importé(s) : ${res.created} créé(s), ${res.updated} mis à jour.\n${detail}`;
+  if (skipped) msg += `\n🚫 ${skipped} ignoré(s) (domaine ou adresse désactivé).`;
+  if (noMail) msg += `\n⚠️ ${noMail} sans adresse e-mail.`;
+  if (suspect.length) msg += `\n⚠️ Adresse suspecte (« ? » à la place de « @ ») : ${suspect.join(', ')}`;
+  toast(msg, 9000, noMail || suspect.length ? 'warn' : '');
+}
+
+// Import du matériel : rattache chaque appareil à son utilisateur principal (UPN)
+function importDevices(rows, headers) {
+  const idx = buildIndex(headers, DEVICE_MAP);
+  if (idx.owner === undefined) {
+    toast(`⚠️ Import matériel : colonne propriétaire (owner / UPN) introuvable.\nEn-têtes détectés : ${headers.slice(0, 12).join(', ')}`, 9000, 'warn');
+    return;
+  }
+  const devices = rows.slice(1).map(c => deviceFromRow(c, idx)).filter(Boolean);
+  if (!devices.length) { toast('⚠️ Aucun appareil trouvé dans ce fichier.', 4000, 'warn'); return; }
+
+  // Rattachement : UPN/adresse si la colonne en contient une, sinon nom affiché (unique uniquement)
+  const ambiguous = [], unknown = [];
+  const findOwner = raw => {
+    const key = String(raw || '').trim();
+    if (!key) return null;
+    if (key.includes('@')) return users.find(u => accountAddresses(u).includes(key.toLowerCase())) || null;
+    const same = users.filter(u => normName(u.displayName) === normName(key));
+    if (same.length === 1) return same[0];
+    if (same.length > 1) ambiguous.push(key);
+    else unknown.push(key);
+    return null;
+  };
+
+  const stats = { created: 0, updated: 0, moved: 0, unassigned: 0 };
+  devices.forEach(d => {
+    const owner = findOwner(d.owner);
+    if (!owner) { stats.unassigned++; return; }
+    // Clé d'unicité : identifiant Entra de l'appareil, sinon numéro de série
+    const key = d.deviceId || d.serial;
+    const same = eq => !!key && (d.deviceId ? eq.deviceId === d.deviceId : eq.serial === d.serial);
+    const entry = {
+      type: d.model || d.os || 'Appareil',
+      asset: d.asset || d.name,
+      serial: d.serial,
+      deviceId: d.deviceId,
+      status: d.enabled === false ? 'Désactivé' : 'Attribué',
+      notes: [d.manufacturer, [d.os, d.osVersion].filter(Boolean).join(' '), d.trust === 'AzureAd' ? 'Jointe Entra ID' : d.trust === 'Workplace' ? 'Inscrite (Workplace)' : d.trust].filter(Boolean).join(' · ')
+    };
+    // Appareil déjà présent : mise à jour, ou déplacement si le propriétaire a changé
+    let found = null;
+    if (key) users.forEach(u => u.equipment.forEach((eq, j) => { if (!found && same(eq)) found = { u, j }; }));
+    if (found && found.u === owner) {
+      found.u.equipment[found.j] = { ...found.u.equipment[found.j], ...entry };
+      stats.updated++;
+      return;
+    }
+    if (found) { found.u.equipment.splice(found.j, 1); stats.moved++; }
+    else stats.created++;
+    owner.equipment.push(entry);
+  });
+
+  logAudit('Import matériel', ADMIN_LABEL, `${stats.created} ajouté(s), ${stats.updated} mis à jour, ${stats.moved} déplacé(s), ${stats.unassigned} non rattaché(s)`);
+  saveAll(); renderAll(); activateTab('users');
+  let msg = `🖥️ ${devices.length} appareil(s) traité(s) : ${stats.created} ajouté(s), ${stats.updated} mis à jour, ${stats.moved} déplacé(s).`;
+  if (stats.unassigned) msg += `\n⚠️ ${stats.unassigned} non rattaché(s) (propriétaire vide ou absent de la liste).`;
+  if (ambiguous.length) msg += `\n⚠️ Homonymes, non rattachés : ${[...new Set(ambiguous)].slice(0, 5).join(', ')}. Utilisez l'UPN pour les lever.`;
+  toast(msg, 9000, stats.unassigned || ambiguous.length ? 'warn' : '');
+}
+
+function importUsers(rows, headers) {
+  const idx = buildIndex(headers, USER_MAP);
+  if (idx.upn === undefined) { toast('⚠️ Colonne e-mail / UPN introuvable dans ce fichier.', 5000, 'warn'); return; }
+  const allImported = rows.slice(1).map(c => userFromRow(c, idx)).filter(u => u && u.upn);
+  const imported = allImported.filter(u => !isHidden(u));
+  const skippedU = allImported.length - imported.length;
+  const skipNote = skippedU ? `\n🚫 ${skippedU} ignoré(s) (domaine ou adresse désactivé).` : '';
+  if (!imported.length) { toast('⚠️ Aucun utilisateur trouvé.', 4000, 'warn'); return; }
+
+  const merge = confirm(`Importer ${imported.length} utilisateur(s).\n\nOK = Fusionner (mettre à jour les existants)\nAnnuler = autres options`);
+  if (merge) {
+    const res = mergeUsers(users, imported);
+    const pc = ensureProfiles(imported.map(u => u.profile));
+    saveAll(); renderAll(); activateTab('users');
+    toast(`✅ ${res.created} créé(s), ${res.updated} mis à jour.` + (pc ? `\n🎭 ${pc} profil(s) créé(s) (sans groupes : à compléter dans l'onglet Profils).` : '') + skipNote);
+    return;
+  }
+  if (confirm('Remplacer TOUS les utilisateurs actuels par ce fichier ?\n\nOK = Remplacer\nAnnuler = Abandonner')) {
+    const before = imported.length;
+    users = uniqueBy(imported, userKey).map(normalizeUser);
+    selUsers.clear();
+    const pc = ensureProfiles(users.map(u => u.profile));
+    saveAll(); renderAll(); activateTab('users');
+    if (pc) toast(`🎭 ${pc} profil(s) créé(s) (sans groupes : à compléter dans l'onglet Profils).`, 5000, 'warn');
+    const dropped = before - users.length;
+    toast(`✅ ${users.length} utilisateur(s) importé(s) (remplacement).` + (dropped ? `\n${dropped} doublon(s) ignoré(s).` : '') + skipNote);
+  } else toast('Import annulé.');
+}
+
+// ─── Export ───
+function download(name, content) {
+  const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function exportCSV() {
+  const rows = sortRows(filteredUsers(), sortState.users, USER_ACC).map(r => r.o);
+  if (!rows.length) { toast('Aucune donnée à exporter.', 3000, 'warn'); return; }
+  const headers = ['UserPrincipalName', 'DisplayName', 'FirstName', 'LastName', 'Department', 'Profile', 'Office', 'Phone', 'City', 'Title', 'Status', 'Equipment'];
+  const lines = rows.map(u => [
+    u.upn, u.displayName, u.firstName, u.lastName, u.department, u.profile, u.office, u.phone, u.city, u.title, u.status,
+    u.equipment.map(e => `${e.type} (${e.asset})`).join(', ')
+  ].map(csvCell).join(';'));
+  download('suivi_utilisateurs_m365.csv', [headers.join(';'), ...lines].join('\n'));
+  toast(`💾 ${rows.length} utilisateur(s) exporté(s).`);
+}
+function exportGroupsCSV() {
+  const rows = sortRows(filteredGroups(), sortState.groups, GROUP_ACC).map(r => r.o);
+  if (!rows.length) { toast('Aucun groupe à exporter.', 3000, 'warn'); return; }
+  const headers = ['Nom', 'Email', 'Type', 'Description', 'Créé le', 'Confidentialité', 'Utilisateurs via profils'];
+  const lines = rows.map(g => [g.name, g.email, g.type, g.desc, g.created, g.visibility, countProfilesFor(g)].map(csvCell).join(';'));
+  download('groupes_m365.csv', [headers.join(';'), ...lines].join('\n'));
+  toast(`💾 ${rows.length} groupe(s) exporté(s).`);
+}
+
+// ─── Mode édition ───
+function toggleEdit() {
+  editMode = !editMode;
+  const btn = document.getElementById('editToggle');
+  btn.textContent = editMode ? '✅ Mode Lecture' : '✏️ Mode Modification';
+  btn.classList.toggle('active', editMode);
+  renderTable();
+}
+
+// ─── Filtres utilisateurs ───
+function filteredUsers() {
+  const q = document.getElementById('userSearch').value.trim().toLowerCase();
+  const fS = document.getElementById('fStatus').value;
+  const fP = document.getElementById('fProfile').value;
+  const fD = document.getElementById('fDept').value;
+  const fE = document.getElementById('fEquip').value;
+  return users.map((o, i) => ({ o, i })).filter(({ o }) => {
+    if (isHidden(o)) return false;
+    if (!matchesDomain(o)) return false;
+    if (q && ![o.displayName, o.upn, o.department, o.title, o.office, o.phone].some(v => (v || '').toLowerCase().includes(q))) return false;
+    if (fS && o.status !== fS) return false;
+    if (fP === '__none' && o.profile) return false;
+    if (fP && fP !== '__none' && o.profile !== fP) return false;
+    if (fD && (o.department || '') !== fD) return false;
+    if (fE === 'yes' && !o.equipment.length) return false;
+    if (fE === 'no' && o.equipment.length) return false;
+    return true;
+  });
+}
+function resetUserFilters() {
+  ['fStatus', 'fProfile', 'fDept', 'fEquip'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('userSearch').value = '';
+  selectedDomains.clear();
+  renderAll();
+}
+function fillSelect(id, first, options) {
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${esc(first)}</option>` + options.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+function renderFilters() {
+  fillSelect('fProfile', 'Tous les profils', [{ value: '__none', label: 'Sans profil' }, ...profiles.map(p => ({ value: p.name, label: p.name }))]);
+  const depts = [...new Set(users.filter(u => !isHidden(u)).map(u => u.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+  fillSelect('fDept', 'Tous les services', depts.map(d => ({ value: d, label: d })));
+}
+
+const USER_ACC = {
+  displayName: o => o.displayName || '', upn: o => o.upn || '', department: o => o.department || '',
+  profile: o => o.profile || '', office: o => o.office || '', phone: o => o.phone || '',
+  status: o => o.status || '', equipCount: o => o.equipment?.length || 0
+};
+
+// ─── Rendu table utilisateurs ───
+function renderTable() {
+  renderFilters();
+  const rows = sortRows(filteredUsers(), sortState.users, USER_ACC);
+  updateArrows('userTable', sortState.users);
+  const ed = editMode ? ' contenteditable="true" class="editable"' : '';
+  const cell = (f, i, v) => `<span${ed} data-i="${i}" data-f="${f}">${v ? esc(v) : '—'}</span>`;
+  document.getElementById('tableBody').innerHTML = rows.length ? rows.map(({ o, i }) => {
+    const ec = o.equipment.length;
+    return `<tr data-i="${i}">
+      <td class="sel-col"><input type="checkbox" data-selu="${i}" ${selUsers.has(i) ? 'checked' : ''}></td>
+      <td>${cell('displayName', i, o.displayName)}</td>
+      <td>${cell('upn', i, o.upn)}</td>
+      <td>${cell('department', i, o.department)}</td>
+      <td>${profileChip(o.profile)}</td>
+      <td>${cell('office', i, o.office)}</td>
+      <td>${cell('phone', i, o.phone)}</td>
+      <td><span class="badge ${o.status === 'Actif' ? 'badge-active' : 'badge-inactive'}">${esc(o.status || 'Actif')}</span></td>
+      <td><span style="color:#0078d4;font-weight:600">${ec}</span> ${ec ? '🔧' : ''}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="9" style="text-align:center;color:#888;padding:40px">Aucun utilisateur ne correspond aux filtres.</td></tr>`;
+  document.getElementById('userCount').textContent = `${rows.length} affiché(s) sur ${users.filter(u => !isHidden(u)).length}`;
+  updateSelectionUI();
+}
+
+// Édition inline dans la table (sans ouvrir la fiche)
+document.getElementById('tableBody').addEventListener('input', e => {
+  const el = e.target.closest('[data-f]');
+  if (!el) return;
+  const i = +el.dataset.i, u = users[i];
+  if (!u) return;
+  const val = el.textContent.trim();
+  if (el.dataset.f === 'upn' && findDuplicate(users, { upn: val }, userKey, i) >= 0) {
+    toast('⚠️ Cet UPN existe déjà : modification annulée.', 3500, 'warn');
+    el.textContent = u.upn || '';
+    return;
+  }
+  u[el.dataset.f] = val;
+  saveAll(); updateStats();
+});
+document.getElementById('tableBody').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-i]');
+  if (!tr || e.target.closest('[contenteditable="true"],input')) return;
+  openModal(+tr.dataset.i);
+});
+document.getElementById('tableBody').addEventListener('change', e => {
+  const cb = e.target.closest('input[data-selu]');
+  if (cb) toggleUserSel(+cb.dataset.selu, cb.checked);
+});
+document.getElementById('groupBody').addEventListener('change', e => {
+  const cb = e.target.closest('input[data-selg]');
+  if (cb) toggleGroupSel(+cb.dataset.selg, cb.checked);
+});
+
+// ─── Stats ───
+function updateStats() {
+  const f = users.filter(u => !isHidden(u) && matchesDomain(u));
+  document.getElementById('statTotal').textContent = f.length;
+  document.getElementById('statActive').textContent = f.filter(u => u.status === 'Actif').length;
+  document.getElementById('statEquip').textContent = f.reduce((s, u) => s + (u.equipment?.length || 0), 0);
+  document.getElementById('statDepts').textContent = new Set(f.map(u => u.department).filter(Boolean)).size;
+}
+
+// ─── Modal Détail utilisateur ───
+function openModal(i) {
+  selectedIdx = i;
+  const u = users[i];
+  if (!u) return;
+  document.getElementById('modalTitle').textContent = u.displayName || u.upn || 'Utilisateur';
+  const ed = editMode ? ' contenteditable="true" class="editable"' : '';
+  const field = (label, key) => `<div class="info-item"><div class="label">${label}</div><div class="value"><span${ed} data-f="${key}">${esc(u[key]) || '—'}</span></div></div>`;
+  const profOpts = '<option value="">— Aucun —</option>' + profiles.map(p => `<option value="${esc(p.name)}" ${u.profile === p.name ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+
+  let html = '<div class="info-grid">';
+  html += `<div class="info-item"><div class="label">Profil</div><div class="value">${editMode
+    ? `<select data-sel="profile" style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:.85rem">${profOpts}</select>`
+    : profileChip(u.profile)}</div></div>`;
+  html += field('Email (UPN)', 'upn') + field("Nom d'affichage", 'displayName') + field('Prénom', 'firstName')
+        + field('Nom', 'lastName') + field('Département', 'department') + field('Poste / Fonction', 'title')
+        + field('Bureau', 'office') + field('Ville', 'city') + field('Téléphone', 'phone');
+  html += `<div class="info-item"><div class="label">Statut</div><div class="value">${editMode
+    ? `<select data-sel="status" style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:.85rem"><option ${u.status === 'Actif' ? 'selected' : ''}>Actif</option><option ${u.status === 'Inactif' ? 'selected' : ''}>Inactif</option></select>`
+    : `<span class="badge ${u.status === 'Actif' ? 'badge-active' : 'badge-inactive'}">${esc(u.status || 'Actif')}</span>`}</div></div>`;
+  html += '</div>';
+
+  const prof = profiles.find(p => p.name === u.profile);
+  if (prof && prof.groups.length) {
+    html += `<div class="section-title">🎭 Accès via profil « ${esc(u.profile)} »</div><div class="profile-groups">`;
+    prof.groups.forEach(g => { html += `<span class="profile-group-tag">📁 ${esc(g)}</span>`; });
+    html += '</div>';
+  }
+
+  html += '<div class="section-title">🔧 Équipements attribués</div>';
+  html += '<table class="equip-table"><thead><tr><th>Type</th><th>Inventaire</th><th>Série</th><th>Statut</th><th>Notes</th>' + (editMode ? '<th></th>' : '') + '</tr></thead><tbody>';
+  u.equipment.forEach((eq, j) => {
+    const c = f => `<span${ed} data-eq="${j}" data-ef="${f}">${esc(eq[f])}</span>`;
+    html += `<tr><td>${c('type')}</td><td>${c('asset')}</td><td>${c('serial')}</td><td>${c('status')}</td><td>${c('notes')}</td>`
+          + (editMode ? `<td><button class="btn btn-danger btn-sm" onclick="removeEquip(${j})">✕</button></td>` : '') + '</tr>';
+  });
+  html += '</tbody></table>';
+  if (editMode) html += '<div class="add-equip-row"><button class="btn btn-success btn-sm" onclick="addEquip()">+ Ajouter un équipement</button></div>';
+
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+document.getElementById('modalBody').addEventListener('input', e => {
+  const el = e.target.closest('[data-f],[data-ef]');
+  if (!el || selectedIdx < 0) return;
+  const u = users[selectedIdx];
+  if (el.dataset.f === 'upn' && findDuplicate(users, { upn: el.textContent.trim() }, userKey, selectedIdx) >= 0) {
+    toast('⚠️ Cet UPN existe déjà : modification annulée.', 3500, 'warn');
+    el.textContent = u.upn || '';
+    return;
+  }
+  if (el.dataset.f) u[el.dataset.f] = el.textContent.trim();
+  else u.equipment[+el.dataset.eq][el.dataset.ef] = el.textContent.trim();
+  saveAll();
+});
+document.getElementById('modalBody').addEventListener('change', e => {
+  const el = e.target.closest('[data-sel]');
+  if (!el || selectedIdx < 0) return;
+  users[selectedIdx][el.dataset.sel] = el.value;
+  saveAll();
+  openModal(selectedIdx);
+});
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  saveAll();
+  renderAll();
+}
+function addEquip() { users[selectedIdx].equipment.push({ type: '', asset: '', serial: '', status: 'Attribué', notes: '' }); saveAll(); openModal(selectedIdx); }
+function removeEquip(j) { users[selectedIdx].equipment.splice(j, 1); saveAll(); openModal(selectedIdx); }
+// ─── Suppression et sélection ───
+function removeUsers(indexes) {
+  const drop = new Set(indexes);
+  users = users.filter((_, i) => !drop.has(i));
+  selUsers.clear(); selectedIdx = -1;
+  saveAll(); renderAll();
+}
+function deleteUser() {
+  if (selectedIdx < 0 || !confirm('Supprimer cet utilisateur ?')) return;
+  removeUsers([selectedIdx]);
+  closeModal();
+}
+function deleteSelectedUsers() {
+  const idx = [...selUsers].filter(i => i < users.length);
+  if (!idx.length) return;
+  if (!confirm(`Supprimer ${idx.length} utilisateur(s) sélectionné(s) ?\n\nLes données sont supprimées du navigateur : pensez à exporter avant si besoin.`)) return;
+  removeUsers(idx);
+  toast(`🗑️ ${idx.length} utilisateur(s) supprimé(s).`);
+}
+function removeDuplicateUsers() {
+  const dups = duplicateIndexes(users, userKey);
+  if (!dups.length) { toast('✅ Aucun doublon d\'utilisateur (même UPN).'); return; }
+  if (!confirm(`${dups.length} doublon(s) détecté(s) (même UPN).\nLa première occurrence est conservée. Supprimer les autres ?`)) return;
+  removeUsers(dups);
+  toast(`🧹 ${dups.length} doublon(s) supprimé(s).`);
+}
+function toggleUserSel(i, on) { on ? selUsers.add(i) : selUsers.delete(i); updateSelectionUI(); }
+function toggleGroupSel(i, on) { on ? selGroups.add(i) : selGroups.delete(i); updateSelectionUI(); }
+function toggleAllUsers(on) { filteredUsers().forEach(({ i }) => on ? selUsers.add(i) : selUsers.delete(i)); renderTable(); }
+function toggleAllGroups(on) { filteredGroups().forEach(({ i }) => on ? selGroups.add(i) : selGroups.delete(i)); renderGroups(); }
+function updateSelectionUI() {
+  const nU = [...selUsers].filter(i => i < users.length).length;
+  const bu = document.getElementById('btnDelUsers');
+  bu.textContent = `🗑️ Supprimer la sélection${nU ? ` (${nU})` : ''}`;
+  bu.disabled = !nU;
+  const vu = filteredUsers();
+  document.getElementById('selAllUsers').checked = vu.length > 0 && vu.every(({ i }) => selUsers.has(i));
+
+  const nG = [...selGroups].filter(i => i < groups.length).length;
+  const bg = document.getElementById('btnDelGroups');
+  bg.textContent = `🗑️ Supprimer la sélection${nG ? ` (${nG})` : ''}`;
+  bg.disabled = !nG;
+  const vg = filteredGroups();
+  document.getElementById('selAllGroups').checked = vg.length > 0 && vg.every(({ i }) => selGroups.has(i));
+}
+function resetAll() {
+  if (!confirm('⚠️ Tout réinitialiser (utilisateurs, groupes, profils) ?')) return;
+  users = []; groups = []; profiles = []; selectedDomains.clear();
+  selUsers.clear(); selGroups.clear();
+  saveAll(); renderAll();
+}
+
+// ─── MODAL AJOUT UTILISATEUR ───
+function openAddModal() {
+  ['addUpn', 'addDisplayName', 'addFirstName', 'addLastName', 'addDepartment', 'addTitle', 'addOffice', 'addCity', 'addPhone'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('addStatus').value = 'Actif';
+  const sel = document.getElementById('addProfile');
+  sel.innerHTML = '<option value="">— Aucun —</option>' + profiles.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  document.getElementById('addEquipList').innerHTML = '';
+  addEquipFormRow();
+  document.getElementById('addModalOverlay').classList.add('open');
+}
+function closeAddModal() { document.getElementById('addModalOverlay').classList.remove('open'); }
+function addEquipFormRow() {
+  const row = document.createElement('div');
+  row.className = 'equip-form-row';
+  row.innerHTML = `
+    <div><label>Type</label><input type="text" placeholder="PC Portable" class="eq-type"></div>
+    <div><label>Inventaire</label><input type="text" placeholder="INV-001" class="eq-asset"></div>
+    <div><label>Série</label><input type="text" placeholder="SN123456" class="eq-serial"></div>
+    <div><label>Statut</label><input type="text" value="Attribué" class="eq-status"></div>
+    <div><label>Notes</label><input type="text" placeholder="…" class="eq-notes"></div>
+    <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()" title="Retirer">✕</button>`;
+  document.getElementById('addEquipList').appendChild(row);
+}
+function saveNewUser() {
+  const upn = document.getElementById('addUpn').value.trim().toLowerCase();
+  const displayName = document.getElementById('addDisplayName').value.trim();
+  if (!UPN_RE.test(upn)) { toast('⚠️ Email (UPN) invalide.', 3500, 'warn'); return; }
+  if (isHidden(upn)) { toast('🚫 Ce domaine ou cette adresse est désactivé. Réactivez-le pour ajouter cet utilisateur.', 4500, 'warn'); return; }
+  if (!displayName) { toast("⚠️ Le nom d'affichage est obligatoire.", 3500, 'warn'); return; }
+  if (users.some(u => (u.upn || '').toLowerCase() === upn)) { toast('⚠️ Un utilisateur avec cet UPN existe déjà.', 3500, 'warn'); return; }
+  const equipment = [];
+  document.querySelectorAll('#addEquipList .equip-form-row').forEach(row => {
+    const v = c => row.querySelector(c).value.trim();
+    const type = v('.eq-type'), asset = v('.eq-asset');
+    if (type || asset) equipment.push({ type, asset, serial: v('.eq-serial'), status: v('.eq-status') || 'Attribué', notes: v('.eq-notes') });
+  });
+  const val = id => document.getElementById(id).value.trim();
+  users.push(normalizeUser({
+    upn, displayName, firstName: val('addFirstName'), lastName: val('addLastName'),
+    department: val('addDepartment'), title: val('addTitle'), office: val('addOffice'),
+    city: val('addCity'), phone: val('addPhone'), status: document.getElementById('addStatus').value,
+    profile: document.getElementById('addProfile').value, equipment
+  }));
+  saveAll(); closeAddModal(); renderAll();
+  toast(`✅ « ${displayName} » ajouté.`);
+}
+
+// ─── GROUPES ───
+const GROUP_ACC = {
+  name: g => g.name || '', email: g => g.email || '', type: g => g.type || '', desc: g => g.desc || '',
+  created: g => g.created || '', visibility: g => g.visibility || '', profileCount: g => countProfilesFor(g)
+};
+function countProfilesFor(g) {
+  return users.filter(u => profiles.find(p => p.name === u.profile)?.groups?.includes(g.name)).length;
+}
+function badgeFor(t) {
+  return t === 'Liste de diffusion' ? 'badge-list' : (t === 'Groupe de sécurité' || t === 'Groupe de sécurité à extension messagerie') ? 'badge-sec' : 'badge-group';
+}
+function fmtDate(v) { return v ? v.split('-').reverse().join('/') : '—'; }
+function filteredGroups() {
+  const q = document.getElementById('groupSearch').value.trim().toLowerCase();
+  const t = document.getElementById('gType').value;
+  return groups.map((o, i) => ({ o, i })).filter(({ o }) => {
+    if (isHidden(o.email)) return false;
+    if (t && o.type !== t) return false;
+    if (q && ![o.name, o.email, o.desc, o.type].some(v => (v || '').toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+function resetGroupFilters() {
+  document.getElementById('groupSearch').value = '';
+  document.getElementById('gType').value = '';
+  renderGroups();
+}
+function renderGroups() {
+  const typeList = [...new Set(groups.map(g => g.type).filter(Boolean))];
+  fillSelect('gType', 'Tous les types', typeList.map(t => ({ value: t, label: t })));
+  const rows = sortRows(filteredGroups(), sortState.groups, GROUP_ACC);
+  updateArrows('groupTable', sortState.groups);
+  document.getElementById('groupBody').innerHTML = rows.length ? rows.map(({ o: g, i }) => `
+    <tr>
+      <td class="sel-col"><input type="checkbox" data-selg="${i}" ${selGroups.has(i) ? 'checked' : ''}></td>
+      <td><strong>${esc(g.name) || '—'}</strong></td>
+      <td>${esc(g.email) || '—'}</td>
+      <td><span class="badge ${badgeFor(g.type)}">${esc(g.type)}</span></td>
+      <td>${esc(g.desc) || '—'}</td>
+      <td>${fmtDate(g.created)}</td>
+      <td>${esc(g.visibility) || '—'}</td>
+      <td>${countProfilesFor(g)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-primary btn-sm" onclick="openGroupModal(${i})">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteGroup(${i})">✕</button>
+      </td>
+    </tr>`).join('')
+    : `<tr><td colspan="9" style="text-align:center;color:#888;padding:40px">Aucun groupe ou liste.</td></tr>`;
+  document.getElementById('groupCount').textContent = `${rows.length} affiché(s) sur ${groups.length}`;
+  updateSelectionUI();
+}
+function openGroupModal(idx = -1) {
+  editingGroupIdx = idx;
+  const g = idx >= 0 ? groups[idx] : null;
+  document.getElementById('groupModalTitle').textContent = g ? '✏️ Modifier le groupe' : '➕ Nouveau Groupe';
+  document.getElementById('grpName').value = g?.name || '';
+  document.getElementById('grpEmail').value = g?.email || '';
+  document.getElementById('grpDesc').value = g?.desc || '';
+  const types = [...GROUP_TYPES];
+  if (g?.type && !types.includes(g.type)) types.push(g.type);
+  document.getElementById('grpType').innerHTML = types.map(t => `<option ${g?.type === t ? 'selected' : ''}>${esc(t)}</option>`).join('');
+  document.getElementById('groupModalOverlay').classList.add('open');
+}
+function closeGroupModal() { document.getElementById('groupModalOverlay').classList.remove('open'); }
+function saveGroup() {
+  const name = document.getElementById('grpName').value.trim();
+  if (!name) { toast('⚠️ Le nom est obligatoire.', 3500, 'warn'); return; }
+  const email = document.getElementById('grpEmail').value.trim().toLowerCase();
+  if (email && !UPN_RE.test(email)) { toast('⚠️ Adresse e-mail invalide.', 3500, 'warn'); return; }
+  if (isHidden(email)) { toast('🚫 Ce domaine ou cette adresse est désactivé. Réactivez-le pour enregistrer ce groupe.', 4500, 'warn'); return; }
+  const dupAt = findDuplicate(groups, { name, email }, groupKey, editingGroupIdx);
+  if (dupAt >= 0) {
+    toast(`⚠️ Groupe déjà existant : « ${groups[dupAt].name} » (${groups[dupAt].email || 'sans adresse'}).`, 4500, 'warn');
+    return;
+  }
+  const fields = { name, email, type: document.getElementById('grpType').value, desc: document.getElementById('grpDesc').value.trim() };
+  if (editingGroupIdx >= 0) groups[editingGroupIdx] = { ...groups[editingGroupIdx], ...fields };
+  else groups.push(normalizeGroupLike({ ...fields, source: 'manual' }));
+  saveAll(); closeGroupModal(); renderAll();
+  toast('✅ Groupe enregistré.');
+}
+// Supprime des groupes et retire leurs références des profils
+function removeGroups(indexes) {
+  const drop = new Set(indexes);
+  groups = groups.filter((_, i) => !drop.has(i));
+  const remaining = new Set(groups.map(g => g.name));
+  profiles.forEach(p => { p.groups = p.groups.filter(n => remaining.has(n)); });
+  selGroups.clear();
+  saveAll(); renderAll();
+}
+function deleteGroup(i) {
+  if (!confirm('Supprimer ce groupe ?')) return;
+  removeGroups([i]);
+}
+function deleteSelectedGroups() {
+  const idx = [...selGroups].filter(i => i < groups.length);
+  if (!idx.length) return;
+  if (!confirm(`Supprimer ${idx.length} groupe(s) sélectionné(s) ?\n\nIls seront aussi retirés des profils.`)) return;
+  removeGroups(idx);
+  toast(`🗑️ ${idx.length} groupe(s) supprimé(s).`);
+}
+function removeDuplicateGroups() {
+  const dups = duplicateIndexes(groups, groupKey);
+  if (!dups.length) { toast('✅ Aucun doublon de groupe (même adresse, ou même nom sans adresse).'); return; }
+  if (!confirm(`${dups.length} doublon(s) détecté(s) (même adresse, ou même nom sans adresse).\nLa première occurrence est conservée. Supprimer les autres ?`)) return;
+  removeGroups(dups);
+  toast(`🧹 ${dups.length} doublon(s) supprimé(s).`);
+}
+
+// ─── PROFILS ───
+// ─── Onglet Matériel : liste à plat de tous les appareils, avec recherche et filtre de statut ───
+function renderMateriel() {
+  const body = document.getElementById('matBody');
+  if (!body) return;
+  const q = (document.getElementById('matSearch')?.value || '').trim().toLowerCase();
+  const st = document.getElementById('matStatus')?.value || '';
+  const all = [];
+  users.forEach(u => u.equipment.forEach(eq => all.push({ u, eq })));
+  const shown = all.filter(({ u, eq }) => {
+    if (st && eq.status !== st) return false;
+    if (!q) return true;
+    return [eq.asset, eq.serial, eq.type, eq.notes, eq.deviceId, u.displayName, u.upn]
+      .some(v => String(v || '').toLowerCase().includes(q));
+  });
+  body.innerHTML = shown.length ? shown.map(({ u, eq }) => `<tr>
+      <td>${esc(eq.asset || '—')}</td>
+      <td>${esc(u.displayName || u.upn)}<div style="font-size:.72rem;color:#888">${esc(u.upn)}</div></td>
+      <td>${esc(eq.type || '—')}</td>
+      <td>${esc(eq.notes || '—')}</td>
+      <td>${esc(eq.serial || '—')}</td>
+      <td style="font-family:monospace;font-size:.72rem">${esc(eq.deviceId || '—')}</td>
+      <td>${esc(eq.status || '—')}</td>
+    </tr>`).join('')
+    : `<tr><td colspan="7" style="text-align:center;color:#999;padding:20px">${all.length ? 'Aucun appareil ne correspond au filtre.' : 'Aucun appareil. Importez un export d\'appareils (Entra ou Intune) via « Importer CSV ».'}</td></tr>`;
+  document.getElementById('matCount').textContent = `${shown.length} / ${all.length} appareil(s)`;
+}
+
+function renderProfiles() {
+  document.getElementById('profileBody').innerHTML = profiles.map((p, i) => {
+    const assigned = users.filter(u => u.profile === p.name && !isHidden(u)).length;
+    return `<tr>
+      <td>${profileChip(p.name)}${p.desc ? '<br><small style="color:#888">' + esc(p.desc) + '</small>' : ''}</td>
+      <td><div class="profile-groups">${p.groups.map(g => `<span class="profile-group-tag">📁 ${esc(g)}</span>`).join('') || '—'}</div></td>
+      <td><button class="badge badge-profile" style="border:none;cursor:pointer;font-size:.78rem" title="Voir les utilisateurs" onclick="showProfileUsers(${i})">${assigned} utilisateur(s) 🔍</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-primary btn-sm" onclick="openProfileModal(${i})">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProfile(${i})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function openProfileModal(idx = -1) {
+  editingProfileIdx = idx;
+  const p = idx >= 0 ? profiles[idx] : null;
+  document.getElementById('profileModalTitle').textContent = p ? '✏️ Modifier le profil' : '➕ Nouveau Profil';
+  document.getElementById('profName').value = p?.name || '';
+  document.getElementById('profDesc').value = p?.desc || '';
+  document.getElementById('profColor').value = p?.color || '#7b2ff7';
+  document.getElementById('profGroupList').innerHTML = '';
+  if (p) p.groups.forEach(g => addProfGroupRow(g)); else addProfGroupRow();
+  document.getElementById('profileModalOverlay').classList.add('open');
+}
+function closeProfileModal() { document.getElementById('profileModalOverlay').classList.remove('open'); }
+
+// Pop-up : utilisateurs rattachés à un profil
+function showProfileUsers(pi) {
+  const p = profiles[pi];
+  if (!p) return;
+  const list = users.map((u, i) => ({ u, i }))
+    .filter(({ u }) => u.profile === p.name && !isHidden(u))
+    .sort((a, b) => (a.u.displayName || a.u.upn).localeCompare(b.u.displayName || b.u.upn, 'fr', { sensitivity: 'base' }));
+  document.getElementById('profUsersTitle').textContent = `🎭 ${p.name} : ${list.length} utilisateur(s)`;
+  document.getElementById('profUsersBody').innerHTML = list.length ? `
+    <p style="font-size:.8rem;color:#666;margin-bottom:10px">Cliquez sur une ligne pour ouvrir la fiche.</p>
+    <table class="equip-table">
+      <thead><tr><th>Nom</th><th>Email (UPN)</th><th>Service</th><th>Fonction</th><th>Statut</th></tr></thead>
+      <tbody>${list.map(({ u, i }) => `
+        <tr style="cursor:pointer" onclick="openFromProfile(${i})">
+          <td>${esc(u.displayName) || '—'}</td>
+          <td>${esc(u.upn) || '—'}</td>
+          <td>${esc(u.department) || '—'}</td>
+          <td>${esc(u.title) || '—'}</td>
+          <td><span class="badge ${u.status === 'Actif' ? 'badge-active' : 'badge-inactive'}">${esc(u.status || 'Actif')}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<p style="color:#888;padding:20px 0">Aucun utilisateur rattaché à ce profil.</p>';
+  document.getElementById('profUsersOverlay').classList.add('open');
+}
+function closeProfileUsers() { document.getElementById('profUsersOverlay').classList.remove('open'); }
+function openFromProfile(i) { closeProfileUsers(); openModal(i); }
+function addProfGroupRow(existing) {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center;';
+  const sel = document.createElement('select');
+  sel.style.cssText = 'flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:5px;font-size:.82rem;';
+  sel.innerHTML = '<option value="">— Choisir un groupe —</option>' + [...groups].sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    .map(g => `<option value="${esc(g.name)}" ${existing === g.name ? 'selected' : ''}>${esc(g.name)} (${esc(g.type)})</option>`).join('');
+  row.appendChild(sel);
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-danger btn-sm';
+  btn.textContent = '✕';
+  btn.onclick = () => row.remove();
+  row.appendChild(btn);
+  document.getElementById('profGroupList').appendChild(row);
+}
+function saveProfile() {
+  const name = document.getElementById('profName').value.trim();
+  if (!name) { toast('⚠️ Le nom du profil est obligatoire.', 3500, 'warn'); return; }
+  const gs = [...document.querySelectorAll('#profGroupList select')].map(el => el.value).filter(Boolean);
+  const p = { name, desc: document.getElementById('profDesc').value.trim(), color: document.getElementById('profColor').value, groups: [...new Set(gs)] };
+  if (editingProfileIdx >= 0) profiles[editingProfileIdx] = p; else profiles.push(p);
+  saveAll(); closeProfileModal(); renderAll();
+  toast('✅ Profil enregistré.');
+}
+function deleteProfile(i) {
+  if (!confirm('Supprimer ce profil ? Les utilisateurs assignés perdront leur profil.')) return;
+  const profName = profiles[i].name;
+  users.forEach(u => { if (u.profile === profName) u.profile = ''; });
+  profiles.splice(i, 1);
+  saveAll(); renderAll();
+}
+
+// ─── Rôles et demandes de changement de profil ───
+// Contrôle d'interface local : il trace les décisions, mais n'empêche pas un utilisateur de modifier le navigateur.
+const LS_ROLE = 'm365role', LS_WHO = 'm365who', LS_REQ = 'm365requests', LS_AUDIT = 'm365audit';
+const LS_ADMIN_PWD = 'm365adminpwd', SS_UNLOCK = 'm365adminok';
+// Mot de passe administrateur : seul le sel et le hachage sont stockés, jamais le mot de passe
+const adminPwdSet = () => { try { return !!localStorage.getItem(LS_ADMIN_PWD); } catch { return false; } };
+const adminUnlocked = () => { try { return sessionStorage.getItem(SS_UNLOCK) === '1'; } catch { return false; } };
+let role = localStorage.getItem(LS_ROLE) === 'lecteur' ? 'lecteur' : 'admin';
+// Si un mot de passe existe, le mode administrateur n'est pas rétabli sans lui (au rechargement de la page)
+if (adminPwdSet() && !adminUnlocked()) role = 'lecteur';
+let requests = load(LS_REQ, []);
+let audit = load(LS_AUDIT, []);
+let reqTargetUpn = '';
+const isAdmin = () => role === 'admin';
+const ADMIN_LABEL = 'Administrateur';
+
+function fmtDateTime(iso) {
+  try { return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }); } catch { return iso || '—'; }
+}
+function logAudit(action, by, detail) {
+  audit.push({ date: new Date().toISOString(), action, by, detail });
+  if (audit.length > 500) audit = audit.slice(-500);
+}
+function applyRole() {
+  document.body.classList.toggle('lecteur', !isAdmin());
+  document.getElementById('roleSel').value = role;
+  const n = requests.filter(r => r.status === 'En attente').length;
+  document.getElementById('reqCount').textContent = n ? ` (${n})` : '';
+}
+// PBKDF2-SHA256 (200 000 itérations) avec sel aléatoire ; le sel peut être imposé pour vérifier un mot de passe
+async function hashPassword(pwd, saltHex) {
+  const enc = new TextEncoder();
+  const toHex = buf => [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+  const salt = saltHex ? Uint8Array.from(saltHex.match(/../g).map(h => parseInt(h, 16))) : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey('raw', enc.encode(pwd), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' }, key, 256);
+  return { salt: toHex(salt), hash: toHex(bits), iter: 200000 };
+}
+function getAdminPwd() { try { return JSON.parse(localStorage.getItem(LS_ADMIN_PWD) || 'null'); } catch { return null; } }
+async function verifyAdminPassword(pwd) {
+  const s = getAdminPwd();
+  if (!s) return false;
+  return (await hashPassword(pwd, s.salt)).hash === s.hash;
+}
+// Demande et confirme un nouveau mot de passe administrateur ; renvoie true si enregistré
+async function askNewAdminPassword() {
+  const p1 = prompt('Nouveau mot de passe administrateur (8 caractères minimum) :');
+  if (p1 === null) return false;
+  if (p1.length < 8) { toast('⚠️ Mot de passe trop court (8 caractères minimum).', 4000, 'warn'); return false; }
+  const p2 = prompt('Confirmez le mot de passe :');
+  if (p2 !== p1) { toast('⚠️ Les deux mots de passe ne correspondent pas.', 4000, 'warn'); return false; }
+  localStorage.setItem(LS_ADMIN_PWD, JSON.stringify(await hashPassword(p1)));
+  return true;
+}
+
+async function setRole(r) {
+  if (r === 'lecteur') {
+    role = 'lecteur';
+    try { localStorage.setItem(LS_ROLE, role); sessionStorage.removeItem(SS_UNLOCK); } catch {}
+    editMode = false;
+    const b = document.getElementById('editToggle');
+    b.textContent = '✏️ Mode Modification'; b.classList.remove('active');
+    applyRole(); renderAll();
+    toast('👁️ Mode Lecteur : modifications désactivées, demandes possibles.');
+    return;
+  }
+  // Passage en administrateur : mot de passe demandé si défini, sinon proposé à la création
+  if (isAdmin()) return;
+  if (adminPwdSet()) {
+    const p = prompt('Mot de passe administrateur :');
+    if (p === null) { applyRole(); return; }
+    if (!(await verifyAdminPassword(p))) { applyRole(); toast('🔒 Mot de passe incorrect.', 4000, 'warn'); return; }
+  } else if (!(await askNewAdminPassword())) {
+    applyRole();
+    toast('ℹ️ Mode Administrateur non activé : aucun mot de passe défini.', 4000, 'warn');
+    return;
+  }
+  role = 'admin';
+  try { localStorage.setItem(LS_ROLE, role); sessionStorage.setItem(SS_UNLOCK, '1'); } catch {}
+  applyRole(); renderAll();
+  toast('👑 Mode Administrateur activé.');
+}
+
+// Changer le mot de passe : exige le mot de passe actuel s'il existe
+async function changeAdminPassword() {
+  if (!isAdmin()) { toast('🔒 Réservé à l\'administrateur.', 3000, 'warn'); return; }
+  if (adminPwdSet()) {
+    const cur = prompt('Mot de passe administrateur actuel :');
+    if (cur === null) return;
+    if (!(await verifyAdminPassword(cur))) { toast('🔒 Mot de passe actuel incorrect.', 4000, 'warn'); return; }
+  }
+  if (await askNewAdminPassword()) toast('🔑 Mot de passe administrateur enregistré.');
+}
+
+// Lecteur : ouvre la demande pour l'utilisateur affiché
+function openRequestModal() {
+  const u = users[selectedIdx];
+  if (!u) return;
+  const opts = profiles.filter(p => p.name !== u.profile);
+  if (!opts.length) { toast('Aucun autre profil disponible : un administrateur doit en créer un.', 4500, 'warn'); return; }
+  reqTargetUpn = u.upn;
+  document.getElementById('reqTo').innerHTML = opts.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  document.getElementById('reqUser').value = `${u.displayName || ''} (${u.upn})`.trim();
+  document.getElementById('reqFrom').value = u.profile || '— Aucun —';
+  let who = ''; try { who = localStorage.getItem(LS_WHO) || ''; } catch {}
+  document.getElementById('reqWho').value = who;
+  document.getElementById('reqReason').value = '';
+  document.getElementById('reqModalOverlay').classList.add('open');
+}
+function closeRequestModal() { document.getElementById('reqModalOverlay').classList.remove('open'); }
+function submitRequest() {
+  const to = document.getElementById('reqTo').value;
+  const who = document.getElementById('reqWho').value.trim();
+  const reason = document.getElementById('reqReason').value.trim();
+  if (!to || !who || reason.length < 5) { toast('⚠️ Renseignez votre nom, le profil demandé et un motif (5 caractères minimum).', 4500, 'warn'); return; }
+  const u = users.find(x => userKey(x) === reqTargetUpn);
+  if (!u) { toast('⚠️ Utilisateur introuvable.', 3500, 'warn'); return; }
+  try { localStorage.setItem(LS_WHO, who); } catch {}
+  requests.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date: new Date().toISOString(),
+    by: who, upn: u.upn, displayName: u.displayName || '', from: u.profile || '', to, reason, status: 'En attente', decision: ''
+  });
+  logAudit('Demande créée', who, `${u.upn} : ${u.profile || '—'} → ${to}`);
+  saveAll(); closeRequestModal();
+  document.getElementById('modalOverlay').classList.remove('open');
+  renderAll();
+  toast('📨 Demande envoyée. Elle sera appliquée après validation de l\'administrateur.', 4500);
+}
+
+// Administrateur : approuve ou refuse
+function approveRequest(i) {
+  const r = requests[i];
+  if (!r || r.status !== 'En attente') return;
+  const u = users.find(x => userKey(x) === userKey(r));
+  if (!u) {
+    r.status = 'Obsolète'; r.decision = 'Compte introuvable';
+    logAudit('Demande obsolète', ADMIN_LABEL, `${r.upn} (compte introuvable)`);
+    saveAll(); renderAll(); return;
+  }
+  const before = u.profile || '—';
+  ensureProfiles([r.to]);
+  u.profile = r.to;
+  r.status = 'Approuvée';
+  r.decision = `Approuvée le ${fmtDateTime(new Date().toISOString())}`;
+  logAudit('Demande approuvée', ADMIN_LABEL, `${u.upn} : ${before} → ${r.to} (demandé par ${r.by})`);
+  saveAll(); renderAll();
+  toast(`✅ Profil de « ${u.displayName || u.upn} » changé en « ${r.to} ».`);
+}
+function refuseRequest(i) {
+  const r = requests[i];
+  if (!r || r.status !== 'En attente') return;
+  const motif = prompt('Motif du refus (facultatif) :', '');
+  if (motif === null) return;
+  r.status = 'Refusée';
+  r.decision = `Refusée le ${fmtDateTime(new Date().toISOString())}${motif.trim() ? ' : ' + motif.trim() : ''}`;
+  logAudit('Demande refusée', ADMIN_LABEL, `${r.upn} → ${r.to} (demandé par ${r.by})${motif.trim() ? ' : ' + motif.trim() : ''}`);
+  saveAll(); renderAll();
+  toast('Demande refusée.');
+}
+
+const REQ_BADGE = { 'En attente': 'badge-group', 'Approuvée': 'badge-active', 'Refusée': 'badge-inactive', 'Obsolète': 'badge-list' };
+function renderRequests() {
+  const f = document.getElementById('reqFilter').value;
+  document.getElementById('reqAdminInfo').textContent = isAdmin()
+    ? 'Mode Administrateur : approuvez ou refusez les demandes en attente.'
+    : 'Mode Lecteur : vous pouvez suivre les demandes. Seul l\'administrateur peut les approuver.';
+  const rows = requests.map((r, i) => ({ r, i }))
+    .filter(({ r }) => !f || r.status === f)
+    .sort((a, b) => b.r.date.localeCompare(a.r.date));
+  document.getElementById('reqBody').innerHTML = rows.length ? rows.map(({ r, i }) => `
+    <tr>
+      <td>${fmtDateTime(r.date)}</td>
+      <td>${esc(r.by)}</td>
+      <td><strong>${esc(r.displayName) || '—'}</strong><br><small>${esc(r.upn)}</small></td>
+      <td>${esc(r.from) || '—'} → ${profileChip(r.to)}</td>
+      <td>${esc(r.reason)}</td>
+      <td><span class="badge ${REQ_BADGE[r.status] || ''}">${esc(r.status)}</span>${r.decision ? `<br><small>${esc(r.decision)}</small>` : ''}</td>
+      <td style="white-space:nowrap">${isAdmin() && r.status === 'En attente'
+        ? `<button class="btn btn-success btn-sm" onclick="approveRequest(${i})">✔ Approuver</button> <button class="btn btn-danger btn-sm" onclick="refuseRequest(${i})">✕ Refuser</button>`
+        : ''}</td>
+    </tr>`).join('')
+    : `<tr><td colspan="7" style="text-align:center;color:#888;padding:30px">Aucune demande.</td></tr>`;
+  document.getElementById('auditBody').innerHTML = audit.length
+    ? audit.slice(-100).reverse().map(a => `<tr><td>${fmtDateTime(a.date)}</td><td>${esc(a.action)}</td><td>${esc(a.by)}</td><td>${esc(a.detail)}</td></tr>`).join('')
+    : `<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">Journal vide.</td></tr>`;
+}
+
+// ─── Changement de profil en masse ───
+let bulkTargets = [];
+function openBulkProfile() {
+  const visible = filteredUsers();
+  const sel = visible.filter(({ i }) => selUsers.has(i));
+  const targets = (sel.length ? sel : visible).map(({ i }) => i);
+  if (!targets.length) { toast('Aucun utilisateur ne correspond aux filtres.', 3500, 'warn'); return; }
+  bulkTargets = targets;
+  document.getElementById('bulkScope').textContent = sel.length
+    ? `Portée : ${sel.length} utilisateur(s) sélectionné(s). Décochez la sélection pour agir sur tous les filtrés.`
+    : `Portée : ${targets.length} utilisateur(s) affiché(s) après filtres.`;
+  const counts = {};
+  targets.forEach(i => { const p = users[i].profile || '— Aucun —'; counts[p] = (counts[p] || 0) + 1; });
+  document.getElementById('bulkBreakdown').innerHTML = '<strong>Profils actuels :</strong><br>'
+    + Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([p, n]) => `${esc(p)} : ${n}`).join('<br>');
+  document.getElementById('bulkTo').innerHTML = '<option value="__none">— Aucun (retirer le profil) —</option>'
+    + profiles.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  document.getElementById('bulkOverlay').classList.add('open');
+}
+function closeBulkProfile() { document.getElementById('bulkOverlay').classList.remove('open'); }
+function applyBulkProfile() {
+  const to = document.getElementById('bulkTo').value;
+  const newProf = to === '__none' ? '' : to;
+  const changed = bulkTargets.filter(i => i < users.length && (users[i].profile || '') !== newProf);
+  if (!changed.length) { toast('Aucun changement : les utilisateurs ont déjà ce profil.'); closeBulkProfile(); return; }
+  const label = newProf || '— Aucun —';
+  if (!confirm(`Changer le profil de ${changed.length} utilisateur(s) en « ${label} » ?`)) return;
+  if (newProf) ensureProfiles([newProf]);
+  changed.forEach(i => { users[i].profile = newProf; });
+  logAudit('Modification en masse', ADMIN_LABEL, `${changed.length} utilisateur(s) → « ${label} »`);
+  selUsers.clear();
+  saveAll(); closeBulkProfile(); renderAll();
+  toast(`✅ Profil mis à jour pour ${changed.length} utilisateur(s).`);
+}
+
+// Actions d'administration : bloquées en mode Lecteur
+const ADMIN_ONLY = ['openBulkProfile', 'applyBulkProfile','openAddModal', 'saveNewUser', 'deleteUser', 'deleteSelectedUsers', 'removeDuplicateUsers', 'resetAll',
+  'openGroupModal', 'saveGroup', 'deleteGroup', 'deleteSelectedGroups', 'removeDuplicateGroups',
+  'openProfileModal', 'saveProfile', 'deleteProfile', 'addIgnored', 'reactivateIgnored', 'toggleEdit',
+  'addEquip', 'removeEquip', 'addEquipFormRow', 'handleCSV', 'approveRequest', 'refuseRequest'];
+ADMIN_ONLY.forEach(name => {
+  const original = window[name];
+  window[name] = function (...args) {
+    if (!isAdmin()) { toast('🔒 Action réservée à l\'administrateur. Basculez en mode Administrateur, ou faites une demande de changement de profil.', 4500, 'warn'); return; }
+    return original.apply(this, args);
+  };
+});
+
+// ─── Init ───
+applyRole();
+renderAll();
+if (!adminPwdSet()) setTimeout(() => toast('ℹ️ Aucun mot de passe administrateur défini. Choisissez « Administrateur » pour le créer.', 6000), 800);
+</script>
+</body>
+</html>
