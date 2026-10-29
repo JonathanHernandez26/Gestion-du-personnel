@@ -250,6 +250,8 @@ Lors d'un import utilisateurs, les profils cités mais absents sont créés sans
 
 Seuls les utilisateurs dont le profil change sont modifiés. L'opération est tracée dans le journal.
 
+Par défaut le mot de passe est "administrateur"
+
 ---
 
 ## 10. Rôles, demandes et journal
